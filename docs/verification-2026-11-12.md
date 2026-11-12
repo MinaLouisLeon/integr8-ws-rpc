@@ -4,6 +4,13 @@ The developer authorized running the missing commands, committing, pushing and o
 dev. Scope is all source on feature/m0-scaffold (M0–M4). This is verification evidence, not a release,
 an assertion of all milestone acceptance, or an npm publication.
 
+Commit 815f3a5 was pushed and draft PR [#1](https://github.com/MinaLouisLeon/integr8-ws-rpc/pull/1)
+was opened against dev. The first CI run failed before any jobs: this public repository cannot call
+the private shared-config workflow, whose access level is none. CI now uses a local Node 24
+OS-matrix job invoking approved package scripts/published shared presets. No private workflow
+source is copied or access permissions changed. CI results remain separate from local Node 22
+evidence below; the unset-version guard is still expected to block packed checks.
+
 ## Environment and unresolved decisions
 
 - Actual local execution: Windows, Node v22.22.3. The target is Node 24; only Node 20/22 were found

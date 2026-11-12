@@ -611,3 +611,11 @@ pending. Full exact results/limits are in [verification record](verification-202
 The requested delivery is prepared as a draft PR with these explicit blockers, not a release or
 completed first-slice acceptance. Personal editor preferences/generated outputs/local logs are
 excluded. Branch remains feature/m0-scaffold from dev; no main/dev merge, publishing or tag.
+
+Commit 815f3a5 was pushed and draft PR #1 was verified OPEN with base dev. Its initial CI attempt
+failed before any jobs. GitHub metadata confirmed this repository is public, the shared-config
+repository is private and its Actions access level is none. CI now uses a self-contained Node 24
+OS-matrix job invoking approved package scripts/shared published presets. No private workflow
+source was copied, access granted or repository visibility changed. The supplemental consumer/
+stress/docs job is retained. This supersedes the earlier remote-call plan; CI success is not
+assumed. Version selection remains outstanding.
