@@ -619,3 +619,9 @@ OS-matrix job invoking approved package scripts/shared published presets. No pri
 source was copied, access granted or repository visibility changed. The supplemental consumer/
 stress/docs job is retained. This supersedes the earlier remote-call plan; CI success is not
 assumed. Version selection remains outstanding.
+
+The corrected CI then executed core Node 24 checks successfully on Linux/macOS through coverage,
+build and size; export packing failed at the known unset-version guard. Windows lint exposed
+CRLF checkout differences. Added repository .gitattributes to keep text LF on all OSes while
+preserving shared Biome rules. Target runtime core evidence is now available from CI; packed,
+full-matrix, browser/device and complete acceptance evidence are still not assumed.

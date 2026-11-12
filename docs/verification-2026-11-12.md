@@ -11,6 +11,11 @@ OS-matrix job invoking approved package scripts/published shared presets. No pri
 source is copied or access permissions changed. CI results remain separate from local Node 22
 evidence below; the unset-version guard is still expected to block packed checks.
 
+The corrected CI ran on Node 24: Linux/macOS passed install, lint, typecheck, coverage, build and
+size, then failed at the expected unset-version pack guard. Windows exposed CRLF checkout
+differences at lint; .gitattributes now fixes text checkouts to LF without changing formatter rules.
+CI is still not wholly green, and no packed/browser/device pass is inferred from these core checks.
+
 ## Environment and unresolved decisions
 
 - Actual local execution: Windows, Node v22.22.3. The target is Node 24; only Node 20/22 were found
