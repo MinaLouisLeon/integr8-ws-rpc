@@ -1,0 +1,10 @@
+{
+  "extends": "@integr8-media/config/tsconfig/library.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "rootDir": "src"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts", "src/core/testing/**"]
+}

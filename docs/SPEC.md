@@ -109,6 +109,8 @@ exports just to expose all upstream internals.
 | RpcError, RpcErrorCode | root | Transport/lifecycle error with stable code, safe message and optional cause |
 | ConnectionState, ConnectionSnapshot, RpcClientOptions | root | Readonly documented lifecycle/options types |
 | createRpcClient | /client | Return a typed connection handle without opening a socket until connect() |
+| createRpcClientGroup | /client | Own a static typed registry of independent client handles under the approved M4 contract |
+| chunkBinary | /client | Pull bounded binary copies with explicit total byte budget and local-only progress under the approved M4 contract |
 | createRpcServer | /server | Compose an application router with reserved handshake/health procedures and auth guard |
 | registerRpcWebSocket | /fastify | Attach that server to a caller-owned Fastify instance and configurable path |
 
@@ -290,6 +292,19 @@ Initial independent handles must already isolate sockets, auth and state. Add a 
 orchestration API and binary chunk/progress helpers only with reviewed contracts. Never encode
 Workbench file transfer policy or assume a chunk limit implies whole-transfer memory bounds.
 
+M4 contract approved by the developer on 2026-11-12:
+[client group and binary helpers](superpowers/specs/2026-11-12-m4-contracts.md).
+It adds exactly createRpcClientGroup and chunkBinary to /client. The group owns 1..32 distinct
+existing handles in a static named registry, preserves heterogeneous procedure/context types,
+provides safe per-name connectAll results and supports targeted/whole-group cleanup. Names match
+`[A-Za-z][A-Za-z0-9_-]{0,63}`. It never reroutes, shares credentials or adds a retry/replay layer.
+chunkBinary accepts Blob/Uint8Array plus required maxBytes, optional signal/progress and chunkBytes
+(default 65,536; integer 1..1,048,576). maxBytes is a safe nonnegative integer and known input size
+is checked before reading. Progress reports local production/EOF, not wire size or acknowledgement.
+These new helper limits do not change existing transport defaults, codes, wire/auth contracts,
+package entry paths or runtime-support promises. No transfer protocol or whole-transfer memory
+guarantee is implied. The linked approved contract defines the full lifecycle/error semantics.
+
 ### M5 — opt-in offline delivery (follow-on)
 
 Specify expiry, count/byte bounds, persistence ownership, cancellation, server acknowledgements,
@@ -330,13 +345,269 @@ Update this section after each task; never infer verification from source presen
 | Milestone | Written | Developer/CI verified | Branch / evidence / remaining work |
 |---|---|---|---|
 | Specification and agent instructions | Yes | Documentation inspection only | Initial baseline; no manifest, code or runtime evidence |
-| M0 scaffold / compatibility | No | No | Dependency versions/roles and exact upstream type mapping pending |
-| M1 authenticated calls | No | No | Not started |
-| M2 streams / lifecycle | No | No | Not started |
-| M3 consumers / first slice | No | No | Not started; Phase 02 gate pending |
-| M4 multi-server / binary helpers | No | No | Follow-on |
+| M0 scaffold / compatibility | Scaffold written; gate open | Lint/typecheck only | `feature/m0-scaffold` from local `dev` at `fd93759`; approved pins installed by developer and lockfile present. Initial version unset/private. Public generic/context compile fixtures pass; build/export/runtime/stream-bound acceptance remains open. |
+| M1 authenticated calls | Public factories/integration and tests written; gate open | Lint/typecheck only | createRpcClient/createRpcServer/registerRpcWebSocket, guarded context/hello, safe transport-error mapping, Fastify origin/parser/path/disposal handling and loopback playground written. Public inference fixtures pass. Runtime tests/playground and compatibility acceptance remain required. |
+| M2 streams / lifecycle | Client-handle foundations written; gate open | No | Finite retries, heartbeat, epochs, managed opt-in resubscription/gaps, retained iterator cancellation and pre-peer stream accounting written to implement the complete public handle. Stress, cleanup, lifecycle and platform acceptance remain unverified; not a completed M2 delivery. |
+| M3 consumers / first slice | Consumer/playground/stress/release-tooling source written; gate open | Source compile/lint only; runtime pending | Packed Node/browser runner, declaration fixtures, Expo device probe, real browser playground, native stress scenarios, CHANGELOG/acceptance docs and pinned shared CI/hooks written. No packed install/build/browser/native/stress/coverage/CI execution; initial version and all runtime/device gates remain open. |
+| M4 multi-server / binary helpers | Approved helpers, tests and consumer examples written; gate open | Compile/lint only; runtime pending | createRpcClientGroup/chunkBinary added only to /client under the approved contract. Typed fixtures preserve heterogeneous schemas/required context. Lifecycle/binary/encoded-limit/runtime/device and packed acceptance remain unrun. |
 | M5 offline queue | No | No | Follow-on |
 | M6 React / Query | No | No | Follow-on |
 
+The entries below are chronological task records; the table above describes current status.
 No package version is selected, published or claimed. No tests, installs, builds or application
 servers were run when these documents were created.
+
+M0 update (2026-11-11): see [dependency proposal](dependency-proposal.md),
+[compatibility review](transport-compatibility.md) and
+[implementation plan](superpowers/plans/2026-11-11-m0-scaffold.md).
+Registry metadata and published package sources were inspected without installing or executing
+them. At that initial review there were no npm scripts. No implementation checks were run.
+
+After the developer's dependency approval, the approved pins were added to package.json.
+Written files now include root error/lifecycle/options types, separated client/server/Fastify
+entry boundaries, shared tooling configs, private fake-socket harness and adjacent tests,
+upstream transport compile fixtures, package inspection scripts/tests, README and error notes.
+Exact existing scripts: `lint`, `format`, `typecheck`, `test`, `test:coverage`, `build`, `size`,
+`check:exports`, `docs`, `fixtures`. `playground:smoke` is not present; a real playground is later work.
+
+Developer-run evidence: **none**. No installs, lockfile generation, lint, typecheck, test, build,
+size/export/doc/fixture checks or application servers were run by the agent. Source self-review
+only; no sub-agents, commits, pushes or PRs. Initial version remains a developer decision and is
+unset; the incomplete manifest is private. M0 must resolve the recorded upstream buffering,
+disposal and safe error-handling gaps and obtain actual gate evidence before M1. Public option
+field names/type mapping are written for that M0 review, not claimed compile-verified or frozen.
+No defaults, error codes, wire contract or runtime support requirements were changed.
+At the end of that M0 task, M0 was not complete and M1–M6 had not started.
+
+M1 start (2026-11-11, subsequent developer instruction): private source and tests are now written
+in `src/core/{handshake,operation,socketLimits}.ts`, `src/server/{session,peer}.ts` and
+`src/fastify/originPolicy.ts`. See the [M1 plan](superpowers/plans/2026-11-11-m1-authenticated-calls.md)
+and updated compatibility/dependency notes. The request authorizes M1 source work, not a claim
+that the M0 gate has passed. All public barrels, dependency pins and package version are unchanged.
+No new runtime dependency was added. No installs, implementation commands, tests, servers or
+playgrounds ran; review was source-only without sub-agents. Developer-run commands available for
+this slice are `npm run lint`, `npm run typecheck` and `npm run test:coverage` after installation.
+M1 is not complete; public integration, open compatibility decisions and actual acceptance
+evidence remain required. M2–M6 have not started.
+
+M1 client follow-up (2026-11-11): after explicit approval, @orpc/standard-server-peer 1.16.2 was
+added as a direct runtime pin. `src/client/peerClient.ts` and `src/client/connection.ts` now compose
+stable ClientPeer + StandardRPCLink for private typed unary calls, reserved hello, ready gating,
+deadlines/cancellation, safe snapshots, listener cleanup, explicit fresh attempts and conservative
+OUTCOME_UNKNOWN without replay. Hello reply validation, safe close-code handling, fake socket-pair
+support, adjacent tests and owned-client/context compile fixtures were added. Public barrels,
+default requirements, error-code set, wire contract and runtime support remain unchanged; no
+experimental peer or private upstream field is used. This does not implement the public stream
+handle, automatic retry or heartbeat, and does not establish per-stream queue bounds.
+
+Developer-run evidence remains **none**. No dependency install, lockfile generation, lint,
+typecheck, test, build, size/export/fixture run, server or playground was executed. Source review
+only; no sub-agents, commits, pushes or publication. Exact available source checks after developer
+installation: `npm run lint`, `npm run typecheck`, `npm run test:coverage` (typecheck includes the
+compile fixture). The initial version and all milestone acceptance gates remain developer-owned.
+M1 remains incomplete; M2–M6 have not started.
+
+Public integration follow-up (2026-11-11, developer requested implementation of the pending
+factories/Fastify/bounded-stream work): `src/client/createRpcClient.ts`,
+`src/server/createRpcServer.ts`, `src/fastify/registerRpcWebSocket.ts` now implement the three
+documented public exports. Related source includes `fastify/nodeSocket.ts`,
+`server/serverBinding.ts`, `client/peerQuota.ts`, `core/{iteratorLifetime,limits}.ts` and updates
+to peer/session/connection lifetime handling. Required auth context is mapped through upstream
+router middleware; reserved-name collisions and safe transport error mapping are implemented.
+
+The public client includes the full specified handle rather than a unary-only public substitute.
+This entails M2 foundations: finite full-jitter retries, reserved heartbeat, connection epochs,
+opt-in managed resubscription/gaps, unsubscribe and iterator abort lifetime. The stream strategy
+meters public-codec events before ClientPeer queues them, using only upstream-generated IDs and
+upstream abort encoding. Local response annotations never go onto the network. A separate raw
+decoding backlog cap is connection-wide. No memory-bound or passing-compatibility claim is made;
+see the current follow-up in [compatibility](transport-compatibility.md).
+
+Written tests cover public hello/context/typed errors, factory laziness/shared connect, retry
+credential reads, terminal auth rejection, resubscription gaps, reconnect shutdown, expiry during
+stream consumption, capacity release, overflow isolation, binary codec preservation, Fastify origin
+rejection/duplicate paths/host preservation and concurrent server close. Public compile fixtures,
+browser-only tsconfig, API doc entrypoints and installed browser graph inspection were extended.
+`playground/smoke.mjs` imports built public entries and performs a real loopback fake-token exchange
+when the developer runs the new existing script `npm run playground:smoke` (build then smoke).
+
+Branch remains `feature/m0-scaffold`. No dependencies were changed in this follow-up; existing
+approved pins remain. No initial version decision, install, lockfile generation, lint, typecheck,
+test, coverage, build, size/export/doc/fixture check, playground or application server ran.
+Review was source-only, without sub-agents. No commits, pushes, PRs or publication. Exact
+developer-run commands after installation: `npm run lint`, `npm run typecheck`,
+`npm run test:coverage`, `npm run build`, `npm run playground:smoke`, `npm run size`,
+`npm run check:exports`, `npm run docs`. Version selection precedes packed-package checks.
+
+Final source review changed tsdown to the confirmed shared preset's neutral multi-entry graph,
+keeping every export path unchanged. This avoids duplicate RpcError classes across platform builds
+and preserves the shared server-binding WeakMap; Node built-ins remain external. The smoke asserts
+cross-entry error identity, and size inspection includes shared chunks. @orpc/shared's existing
+radash runtime re-export is included in the graph inspector's allowlist; no manifest dependency was
+added. Fastify preClose cleanup is queued before an owned WebSocket plugin's shutdown wait.
+
+Remaining decisions/evidence: initial package version; agreement on any additional non-loopback
+local ws option (current validator permits remote wss and loopback ws only); compile-tested generic
+router/auth composition; runtime/slow-peer/memory stress and lifecycle acceptance; M3 packed browser,
+Node and device consumers. M0/M1/M2 gates are open; M3–M6 are not implemented by this follow-up.
+
+Lint follow-up (2026-11-11): the developer explicitly authorized `npm run lint` and fixing all
+reported issues. The initial run reported 36 errors and one warning. Biome's safe write mode
+formatted/organized 29 files across source, adjacent tests, fixtures, scripts and JSON configs.
+The playground's console success message now uses process.stdout.write, retaining safe CLI output
+without suppressing the shared noConsole rule. No dependency, public contract or lint rule changed.
+
+Fresh verification: `npm run lint` exited 0, checked 56 files, applied no fixes and reported no
+errors or warnings. README and this progress record were then updated; the final lint rerun is
+recorded in the task handoff. A lockfile/dependencies were already present at the start of this
+follow-up; the agent did not install them. No typecheck, tests, build, playground, size/export/docs
+or fixture commands were run. Milestone acceptance gates remain open. Branch is unchanged;
+no commits, pushes or PRs.
+
+Typecheck follow-up (2026-11-11): the developer explicitly authorized `npm run typecheck` and error
+fixes. Corrected the private control-client object from an interface to a type alias so it satisfies
+upstream NestedClient without an index-signature cast; explicitly typed the internal disconnect
+code; preserved the socket's readyState literal union in the Node bridge and test helpers; added
+the public tsdown UserConfig annotation for portable config inference; and imported the fixture
+application as a runtime value where public server composition uses it. No any casts, weakened
+router inference, public contract changes or dependency changes were introduced.
+
+Fresh `npm run typecheck` exited 0: production, browser-without-Node-ambient-types, test/script/config
+projects and the separate transport inference fixture all completed. Positive/negative public
+input/output/error/stream/context fixtures now have compile evidence, including required auth and
+per-call context. This does not establish runtime behavior, packaging or memory bounds. README
+was updated and lint rerun after these changes. No runtime tests, builds, playgrounds, size/export
+or API-doc commands ran. Milestone runtime/compatibility gates remain open; no commits or pushes.
+
+M3 source start (2026-11-12, explicit developer instruction): see
+[implementation plan](superpowers/plans/2026-11-12-m3-consumers.md) and
+[acceptance/evidence matrix](acceptance.md). The existing branch is retained. This advances M3
+source without asserting that M0–M2 runtime gates passed or that Phase 03 is unlocked.
+
+Written files include `playground/router.ts`, `server.mjs`, `dev.mjs`, `browser/{index.html,main.ts}`
+and a playground typecheck project. The router demonstrates typed input/output/errors and paced
+finite events; the browser provides connect/call/subscribe/unsubscribe/close. Vite preserves the
+exact permitted loopback Origin while proxying to the ephemeral Fastify endpoint. Example credentials
+remain fake; no Workbench schema, authentication store or native/runtime dependency was introduced.
+
+`fixtures/consumers/` adds public-only Node/browser clients and positive/negative declaration tests.
+`scripts/{checkConsumers,consumerChecks}.mjs` and adjacent helper tests implement pack-file guards,
+isolated consumer installation outside the repository, declaration compilation, native Node RPC,
+browser graph/dynamic-chunk auditing and a 150 KiB complete-JS gzip fixture budget. Source seams
+are typechecked separately; packed checks generate their own configs with no source aliases.
+When explicitly run by the developer, the runner retains the exact tarball SHA-256, version,
+consumer lockfiles, browser output/graph and command evidence in gitignored fixtures/.artifacts.
+No initial version is invented: the runner fails clearly until the developer selects one.
+
+`fixtures/expo/runDevice.ts` is a real runtime probe to invoke in an existing Expo app; it adds no
+React/native dependencies here. The device guide requires the same actual artifact on physical
+Android/iPadOS, reachable wss, compatible native socket types, safe result capture and separate
+reconnect/background/unsubscribe observations. Its source compilation is not device evidence.
+
+`src/client/transportStress.test.ts` adds native malformed/oversize-peer isolation, slow stream
+item/byte cases with healthy calls/streams, independent handles and 30 fake lifecycle cleanup cycles.
+`scripts/stressTransport.mjs` implements a finite 35-cycle native workload and GC memory samples,
+with incomplete evidence on failure. Its 32 MiB retained heap/external regression envelope is not
+a proof of exact stream/process memory bounds. All new runtime tests/stress remain unexecuted.
+
+README now includes setup, state diagram, delivery/cancellation/cleanup/gap policies, target runtime
+support and migration notes; CHANGELOG is unreleased. TypeDoc retains all four public entries.
+lefthook.yml extends the installed config 1.2.0 preset without adding/installing a Lefthook binary.
+PR CI targets dev and reuses the shared workflow at confirmed remote main commit
+7f7144a23e065ec064c56c7920c88d32c61cc7ce; its exact workflow_call interface was inspected from Git.
+The supplemental job covers packed consumers, stress and docs with artifact retention. Private
+shared-workflow access remains owner configuration; no workflow was pushed or triggered.
+
+No new dependencies, version/license selection, release automation, tokens, tags or publication.
+New actual scripts: `playground`, `check:consumers`, `test:stress`; full typecheck now includes the
+playground and source consumer/device probes. Previously authorized lint and typecheck are the
+only implementation commands executed during this M3 task; final results are recorded in its
+handoff. No installs, unit/coverage tests, build, packed checks, browser/server/playground/stress,
+device, size/export/API-doc or CI commands were run. No sub-agents, commits, pushes or PRs.
+
+Remaining gate evidence: initial version and release license/metadata decision; full coverage and
+all M0–M3 runtime/build/package/size/export checks; actual Android/iPadOS records; slow-peer/memory
+verification and Phase 01 integration prerequisite. M4–M6 remain untouched follow-ons.
+
+M3 verification (2026-11-12): the expanded `npm run typecheck` exited 0, covering production,
+browser, test/script/config, playground and both transport/source consumer/device fixture projects.
+The new Node fixture uses upstream safe to retain its declared error union; no any/cast workaround.
+Final `npm run lint` exited 0, checked 76 files, applied no fixes and reported no diagnostics.
+These checks provide compile/lint evidence only. No new dependency install, runtime test, build, packed consumer, browser/server, stress,
+device, size/export/docs or CI run occurred. All milestone runtime gates remain open.
+
+M4 start (2026-11-12, developer requested implementation): inspected current handle/entry contracts
+and M4's explicit requirement for reviewed contracts. Created the concrete
+[M4 contract proposal](superpowers/specs/2026-11-12-m4-contracts.md): two proposed /client functions,
+typed static group ownership/lifecycle/limits and pull-based binary chunks with explicit total
+budget, local progress, cancellation and error behavior. This is proposed, not an approved extension
+of the public contract. AGENTS requires approval before exports/types/default semantics change.
+
+Added `src/client/independentHandles.test.ts` against existing APIs only: distinct router schemas,
+credentials and application versions; separate session IDs/connect calls; targeted revocation and
+shutdown leaving the sibling usable. The source typecheck passes; this runtime test was not run.
+No production code, public barrels, dependency pins, wire contract or defaults changed. Approval of
+the concrete design is required before implementing the new API; lint/typecheck remain the only
+authorized executed checks. M0–M3 runtime evidence and M5–M6 remain unaffected/open. No install,
+build, test execution, publication, agents, commits, push or PR.
+
+M4 implementation after explicit developer approval (2026-11-12): approved the linked contract and
+wrote `src/client/{createRpcClientGroup,groupSnapshot,chunkBinary}.ts`, adjacent group/binary tests,
+and exactly the two new /client exports. Root/server/Fastify and the package export map are
+unchanged. No dependencies, existing options/defaults/errors/wire/auth semantics were changed.
+
+The group copies/freezes a validated 1..32-handle registry, projects only safe snapshot fields,
+isolates observer failures, preserves child types and owns per-child connect/close promise sharing.
+Connect failures and all-settled reports expose safe codes; one failed child does not roll back a
+healthy sibling. Named close is terminal for that child; whole close commits before callbacks,
+starts every child cleanup synchronously, awaits all cleanup attempts and emits a final snapshot.
+No additional retry/heartbeat/failover/stream owner or automatic call routing/replay was introduced.
+
+The binary iterator validates input budget/options synchronously, copies bounded view/Blob slices
+on demand, serializes requested pulls without a produced-data queue, awaits local progress and
+suppresses late reads/callback results after cancellation. Return interrupts uncooperative pending
+work. Native read failures are sanitized; application progress failures retain their identity.
+Local EOF is the completion linearization point: abort during its completion notification can
+release that observer wait without undoing already-committed EOF. A callback cannot retract a
+progress event it has already observed; no completion event is emitted for failures before EOF.
+Caller-retained input/output and wire encoding overhead remain outside the raw chunk-byte bound.
+
+Source/packed fixtures now cover distinct child schemas, required per-call context, exact names,
+readonly registry/progress and binary output. Node/browser examples use the group and helper;
+the application-owned example binarySize procedure demonstrates upstream Blob encoding, not a
+library transfer protocol. An adjacent peer test checks that encoded frame limits still reject
+messages whose raw chunks fit their helper budget. The Expo probe distinguishes local binary
+bytes from opt-in native binary RPC (verifyBinaryRpc), which remains unverified on actual devices.
+
+Tests were written first but not executed, per AGENTS. Source review covered safe config accessors,
+typed-array override/copy isolation, async lifecycle error sanitization, shutdown/observer races
+and early-return/late-read cancellation. Expanded typecheck and lint are the only executed checks;
+final outputs are recorded in the handoff. Runtime/coverage/build/size/export/packed/browser/native
+checks and earlier milestone gates remain open. No installs, agents, commits, pushes or publishing.
+
+M4 verification: expanded `npm run typecheck` exited 0, including production/browser, tests/tools,
+playground, transport and source/packed-consumer/device inference projects. `npm run lint` checked
+82 files with no remaining diagnostics after formatting; the final plain run is recorded in the
+handoff. These are source compile/lint checks, not a packed consumer or native execution result.
+Existing emitted/complete-browser size budgets and TypeDoc public entry coverage are unchanged;
+actual size/build/API-doc/runtime/coverage results remain developer-run and unverified.
+
+Verification/PR task (2026-11-12): the developer explicitly authorized remaining commands, commit,
+push and a PR into dev. Actual local Node is v22.22.3 (Windows), not the target Node 24. Coverage
+passed all 21 files/131 tests with 89.73% source lines; this includes M4 group/binary, real socket
+malformed/oversize/slow-peer and repeated cleanup cases. Lint/typecheck, ESM/declaration build,
+size budgets (all emitted JS 22.4 kB gzip), TypeDoc, loopback smoke and 35-cycle native stress passed.
+Direct dist/import graph/WebSocket import-isolation inspection also passed. Build deprecation and
+TypeDoc warnings were corrected without adding exports or weakening validation/budgets.
+
+Both packed commands were attempted and failed specifically because no initial package version
+was selected: publint/npm pack in check:exports, and the explicit guard in check:consumers. Approval
+was requested for private initial 0.1.0 and portable official Node 24.22.3 verification; neither
+decision was assumed. No version bump/download/new dependency was performed without approval.
+The playground server/HTML/browser-module HTTP checks passed; browser host/native UI pipe were
+unavailable, so no browser-button or physical-device execution is claimed. Android/iPadOS remain
+pending. Full exact results/limits are in [verification record](verification-2026-11-12.md).
+
+The requested delivery is prepared as a draft PR with these explicit blockers, not a release or
+completed first-slice acceptance. Personal editor preferences/generated outputs/local logs are
+excluded. Branch remains feature/m0-scaffold from dev; no main/dev merge, publishing or tag.

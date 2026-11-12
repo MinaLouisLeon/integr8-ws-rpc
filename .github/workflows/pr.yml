@@ -1,0 +1,40 @@
+name: Pull request checks
+
+on:
+  pull_request:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    # Confirmed remote main commit and workflow_call inputs; package preset is 1.2.0.
+    uses: MinaLouisLeon/integr8-config/.github/workflows/pr-checks.yml@7f7144a23e065ec064c56c7920c88d32c61cc7ce
+    with:
+      os-matrix: true
+      node-version: "24"
+      site-build: false
+  consumers:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run check:consumers
+      - run: npm run test:stress
+      - run: npm run docs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: ws-rpc-consumer-evidence
+          path: fixtures/.artifacts/
+          if-no-files-found: warn
+          retention-days: 14
