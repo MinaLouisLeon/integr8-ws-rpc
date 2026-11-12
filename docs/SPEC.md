@@ -625,3 +625,15 @@ build and size; export packing failed at the known unset-version guard. Windows 
 CRLF checkout differences. Added repository .gitattributes to keep text LF on all OSes while
 preserving shared Biome rules. Target runtime core evidence is now available from CI; packed,
 full-matrix, browser/device and complete acceptance evidence are still not assumed.
+
+PR #1 CI fix (2026-11-12): inspected head 0650902 and Actions run 43158038844.
+All three Node 24 OS jobs pass lint, typecheck, coverage, build and size, then fail at
+check:exports because npm pack requires a package version. The consumers job is skipped
+through needs: checks. Windows LF checkout handling now passes.
+
+After the proposed initial private 0.1.0 and delivery action were presented, the developer
+directed fixing, committing and pushing with all checks on GitHub only. Added initial version
+0.1.0 to package.json and both root lockfile metadata records; private remains true. No
+dependency, public API, workflow check or acceptance gate was changed. No local implementation
+checks ran for this fix. GitHub results are pending developer review; packed consumer/runtime
+success and full milestone acceptance are not claimed. No publication, tag or release.

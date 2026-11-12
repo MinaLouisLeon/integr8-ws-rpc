@@ -1,5 +1,6 @@
 {
   "name": "@integr8-media/ws-rpc",
+  "version": "0.1.0",
   "private": true,
   "description": "Reusable typed WebSocket RPC transport using oRPC.",
   "type": "module",
