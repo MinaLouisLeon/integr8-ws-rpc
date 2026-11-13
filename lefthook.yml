@@ -1,0 +1,3 @@
+# Configuration only: no hook installer or extra dependency is added by this milestone.
+extends:
+  - node_modules/@integr8-media/config/lefthook/base.yml

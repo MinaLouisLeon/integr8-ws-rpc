@@ -1,0 +1,3 @@
+{
+  "extends": ["@integr8-media/config/biome"]
+}

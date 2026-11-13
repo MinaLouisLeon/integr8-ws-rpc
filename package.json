@@ -1,0 +1,102 @@
+{
+  "name": "@integr8-media/ws-rpc",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reusable typed WebSocket RPC transport using oRPC.",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=24"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/browser/index.d.mts",
+      "default": "./dist/browser/index.mjs"
+    },
+    "./client": {
+      "types": "./dist/browser/client/index.d.mts",
+      "default": "./dist/browser/client/index.mjs"
+    },
+    "./server": {
+      "types": "./dist/node/server/index.d.mts",
+      "default": "./dist/node/server/index.mjs"
+    },
+    "./fastify": {
+      "types": "./dist/node/fastify/index.d.mts",
+      "default": "./dist/node/fastify/index.mjs"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.mts",
+      "default": "./dist/react/index.mjs"
+    }
+  },
+  "scripts": {
+    "lint": "biome check",
+    "format": "biome format --write",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.browser.json && tsc --noEmit -p tsconfig.check.json && tsc --noEmit -p playground/tsconfig.json && npm run fixtures",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "build": "tsdown",
+    "size": "size-limit",
+    "check:exports": "publint && attw --pack --profile esm-only && node scripts/checkPackage.mjs",
+    "docs": "typedoc --options typedoc.json",
+    "fixtures": "tsc --noEmit -p fixtures/transport/tsconfig.json && tsc --noEmit -p fixtures/consumers/tsconfig.json",
+    "playground:smoke": "npm run build && node playground/smoke.mjs",
+    "playground": "npm run build && node playground/dev.mjs",
+    "playground:react": "npm run build && node playground/dev.mjs --react",
+    "check:consumers": "node scripts/checkConsumers.mjs",
+    "test:stress": "node --expose-gc scripts/stressTransport.mjs"
+  },
+  "dependencies": {
+    "@fastify/websocket": "11.3.7",
+    "@opentelemetry/api": "1.9.0",
+    "@orpc/client": "1.16.2",
+    "@orpc/server": "1.16.2",
+    "@orpc/standard-server-peer": "1.16.2",
+    "ws": "8.22.2",
+    "zod": "4.6.7"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.107.1",
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0",
+    "fastify": "5.12.8"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-query": {
+      "optional": true
+    },
+    "@types/react": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@biomejs/biome": "2.6.6",
+    "@integr8-media/config": "1.2.0",
+    "@size-limit/file": "14.3.0",
+    "@tanstack/react-query": "5.107.1",
+    "@types/node": "24.10.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/ws": "8.18.2",
+    "@vitest/coverage-v8": "5.1.0",
+    "fastify": "5.12.8",
+    "jsdom": "27.4.0",
+    "publint": "0.3.25",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "size-limit": "14.3.0",
+    "tsdown": "0.23.7",
+    "typedoc": "0.28.20",
+    "typescript": "6.0.3",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  }
+}

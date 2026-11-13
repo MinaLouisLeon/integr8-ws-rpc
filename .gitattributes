@@ -1,0 +1,2 @@
+# Keep checkouts consistent with the shared Biome formatter on every CI OS.
+* text=auto eol=lf
