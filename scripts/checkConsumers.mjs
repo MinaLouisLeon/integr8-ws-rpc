@@ -191,6 +191,8 @@ try {
         '--ignore-scripts',
         '--no-audit',
         '--no-fund',
+        // Vite sets NODE_ENV=production in this process; later installs still need dev tools.
+        '--include=dev',
         // Browser builds require Rolldown's optional native binding.
         ...(kind === 'noPeers' || kind === 'node' ? ['--omit=optional'] : ['--include=optional']),
       ],

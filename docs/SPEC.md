@@ -825,3 +825,15 @@ browser/React builds. Existing optional React-peer absence assertions and all gr
 checks remain enabled. No dependencies, public contracts, budgets or workflow gates changed.
 No local install, lint, typecheck, tests, build, pack/consumer, stress, docs or server command ran
 for this fix. GitHub results for the new commit remain pending; no CI pass is assumed.
+
+PR #2 next consumer follow-up (2026-11-13): run 43434702330 at 707bee5 passes all three
+Node 24 OS jobs plus no-peer/Node consumers and the baseline browser build (44.40 kB gzip).
+The native-binding fix is effective. React consumer installation then omits TypeScript and fails
+at require.resolve('typescript/bin/tsc'), before React compilation/SSR/build, stress or docs.
+
+Root cause: the preceding in-process Vite production build sets process.env.NODE_ENV=production;
+the next npm install inherits it and defaults to omitting development dependencies. Added explicit
+--include=dev to every isolated consumer install. Existing optional-dependency distinctions,
+React-peer absence assertions and all budgets/checks stay enabled. No dependency pins, root
+lockfile, runtime/API behavior or CI gates changed. Continuing the developer-authorized fix/
+commit/push flow; no local CI, install or implementation checks run. New GitHub results pending.
