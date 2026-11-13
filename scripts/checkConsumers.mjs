@@ -191,7 +191,8 @@ try {
         '--ignore-scripts',
         '--no-audit',
         '--no-fund',
-        ...(kind === 'react' ? [] : ['--omit=optional']),
+        // Browser builds require Rolldown's optional native binding.
+        ...(kind === 'noPeers' || kind === 'node' ? ['--omit=optional'] : ['--include=optional']),
       ],
       directory,
     );

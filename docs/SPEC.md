@@ -811,3 +811,17 @@ both transport/consumer source fixture projects, including React/device probes. 
 records updated to distinguish these checks from runtime evidence. No unit/coverage execution,
 build, pack/exports/size, consumers, stress, docs, playground/server/browser/device or CI run.
 No sub-agents, commits, push, PR or publication. M5/M6 runtime acceptance gates remain open.
+
+PR #2 consumer CI follow-up (2026-11-13): inspected run 43433335998 at bb869f8. All three
+Node 24 OS jobs pass lint/typecheck/coverage/build/size/exports. The consumer job passes its
+no-peer and Node probes, then fails loading Vite/Rolldown in the baseline browser consumer:
+the runner's --omit=optional removed @rolldown/binding-linux-x64-gnu. React consumer, stress
+and docs were not reached. This is an install-policy error in the fixture runner, not a package
+transport or TypeScript failure.
+
+Developer directed fixing, committing and pushing, with verification on GitHub only. The runner
+now omits optional dependencies only for noPeers/Node probes and explicitly includes them for
+browser/React builds. Existing optional React-peer absence assertions and all graph/size/type
+checks remain enabled. No dependencies, public contracts, budgets or workflow gates changed.
+No local install, lint, typecheck, tests, build, pack/consumer, stress, docs or server command ran
+for this fix. GitHub results for the new commit remain pending; no CI pass is assumed.
