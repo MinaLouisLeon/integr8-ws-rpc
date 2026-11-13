@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WebSocket RPC playground</title>
+    <style>
+      body { max-width: 52rem; margin: 3rem auto; padding: 0 1rem; font: 1rem system-ui; }
+      button { padding: .7rem; margin: .3rem; }
+      pre { padding: 1rem; background: #eef1f5; white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <h1>WebSocket RPC playground</h1>
+    <p>Loopback example with fake credentials. Connect, call, consume a finite stream, then close.</p>
+    <div>
+      <button id="connect" type="button">Connect</button>
+      <button id="call" type="button">Typed lookup</button>
+      <button id="binary" type="button">Inspect binary chunks</button>
+      <button id="stream" type="button">Subscribe</button>
+      <button id="unsubscribe" type="button">Unsubscribe</button>
+      <button id="close" type="button">Close</button>
+    </div>
+    <p id="state" role="status" aria-live="polite">idle</p>
+    <pre id="output" aria-live="polite"></pre>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

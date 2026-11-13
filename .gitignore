@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+docs/api/
+playground/dist/
+fixtures/**/dist/
+fixtures/.artifacts/
+*.tgz
+*.tsbuildinfo
+.superpowers/
+.vscode/
+.test-results.log
