@@ -1,5 +1,47 @@
 # M0 transport compatibility review
 
+## M6 source extension — 2026-11-13
+
+Approved optional /react entry adds React 19 external-store observation and Query 5.107.1 manual
+reads/explicit mutations. Published Query/core source was inspected again: useQuery forwards an
+execution signal and supports fixed policy options; MutationObserver is public, binds its mutate
+method and updates/reset options by key. The wrapper uses a fresh observer per effective key to
+avoid old-handle data before a reset effect, without owning a connection or changing oRPC 1.16.2.
+
+Root/client graphs still forbid React/Query imports. The build keeps peers external and emits a
+targeted React client directive. Packed no-peer declarations/imports and React SSR/browser graphs
+have new source probes; they have not run. Exact approved dependency pins are in the M6 ledger;
+the developer must install/regenerate package-lock. No new upstream transport adapter or wire
+version, auth behavior, server/node floor or native support claim is introduced.
+
+Manual hooks disable Query's retry, automatic fetch/refetch, offline pause, Suspense/render-prefetch
+and previous/initial data defaults. Empty data functions and own undefined mutation scope are used
+to satisfy exactOptionalPropertyTypes without any casts. Cache identity uses a private weak handle
+ID and caller non-secret scope/input keys; no credential/session identifier is used. QueryClient
+ownership, direct fetching/persistence APIs and application global callbacks remain caller policy.
+
+## M5 source extension — 2026-11-13
+
+The approved createRpcOfflineQueue and createRpcDeliveryLedger helpers compose caller-owned
+application procedures and add no transport frames, reserved namespace methods, upstream private
+API, error codes or existing default changes. The dependency line remains oRPC 1.16.2. Installed
+client serializer source and ClientOptions declarations were inspected again for M5; Context7's
+nearest indexed v1 docs are 1.14.6 and are not substituted for the installed 1.16.2 declarations.
+
+Important boundary: StandardRPCJsonSerializer has Blob and ordinary array support, but no built-in
+Uint8Array type tag. M5 helper envelopes contain typed arrays locally; the example's application
+Zod schemas send bounded number arrays and map them back explicitly. No unsupported typed-array
+round-trip, custom upstream serializer or binary/native support claim is introduced.
+
+Ledger-owned execution deliberately outlives an individual RPC observer's abort. The application
+must wrap only operations for which this lifetime is intended, derive scope from authenticated
+context on every route and use ledger shutdown for cooperative cancellation. Existing Session
+still aborts ordinary per-call observers/streams. No session/auth guard is bypassed.
+
+Queue deadlines/expiry, process-local retention and the socket lost-response/status integration
+have new test source, not new runtime evidence. Expanded source/packed/native probes remain unrun.
+Older source-history statements below must not be interpreted as fresh M5 verification.
+
 Reviewed 2026-11-11. **Source inspection only; not a passing compatibility gate.**
 Approved release line: oRPC **1.16.2** for every directly used oRPC package (session approval).
 Published npm archives for client, server, standard-server-peer and config were extracted in a

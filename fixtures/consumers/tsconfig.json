@@ -6,7 +6,8 @@
       "@integr8-media/ws-rpc": ["../../src/index.ts"],
       "@integr8-media/ws-rpc/client": ["../../src/client/index.ts"],
       "@integr8-media/ws-rpc/server": ["../../src/server/index.ts"],
-      "@integr8-media/ws-rpc/fastify": ["../../src/fastify/index.ts"]
+      "@integr8-media/ws-rpc/fastify": ["../../src/fastify/index.ts"],
+      "@integr8-media/ws-rpc/react": ["../../src/react/index.ts"]
     }
   },
   "include": ["./*.ts", "./*.mts", "../expo/*.ts"],

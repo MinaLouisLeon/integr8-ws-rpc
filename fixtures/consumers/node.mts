@@ -5,6 +5,7 @@ import { registerRpcWebSocket } from '@integr8-media/ws-rpc/fastify';
 import { createRpcServer } from '@integr8-media/ws-rpc/server';
 import { safe } from '@orpc/client';
 import Fastify from 'fastify';
+import { makeExampleOfflineQueue } from './offlineClient.ts';
 import { type ExampleClient, exampleRouter } from './router.ts';
 
 const app = Fastify({ logger: false });
@@ -22,6 +23,7 @@ const adapter = registerRpcWebSocket(app, server, {
 app.get('/health', () => ({ alive: true }));
 let connection: ReturnType<typeof createRpcClient<ExampleClient>> | undefined;
 let closeGroup: (() => Promise<void>) | undefined;
+let closeQueue: (() => Promise<void>) | undefined;
 try {
   await app.listen({ host: '127.0.0.1', port: 0 });
   const address = app.server.address();
@@ -35,8 +37,14 @@ try {
   });
   assert.equal(connection.getSnapshot().state, 'idle');
   const group = createRpcClientGroup({ main: connection });
+  const offline = makeExampleOfflineQueue(connection);
+  closeQueue = () => offline.close();
+  const ticket = offline.enqueue(2, { key: 'packed_node_increment' });
+  assert.equal(offline.getSnapshot().queued, 1);
   closeGroup = () => group.close();
   assert.deepEqual(await group.connectAll(), { main: { status: 'fulfilled' } });
+  assert.equal(await ticket.result, 2);
+  assert.equal(offline.getSnapshot().retainedBytes, 0);
   assert.deepEqual(await connection.client.lookup({ id: 'node' }), {
     id: 'node',
     owner: 'packed-node',
@@ -70,6 +78,7 @@ try {
   assert.equal(app.server.listening, true);
   assert.equal((await app.inject('/health')).statusCode, 200);
 } finally {
+  await closeQueue?.();
   await closeGroup?.();
   await connection?.close();
   await adapter.dispose();

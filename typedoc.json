@@ -5,7 +5,8 @@
     "src/index.ts",
     "src/client/index.ts",
     "src/server/index.ts",
-    "src/fastify/index.ts"
+    "src/fastify/index.ts",
+    "src/react/index.ts"
   ],
   "out": "docs/api",
   "readme": "README.md",

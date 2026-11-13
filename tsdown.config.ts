@@ -10,10 +10,27 @@ const config: UserConfig = {
       'browser/client/index': 'src/client/index.ts',
       'node/server/index': 'src/server/index.ts',
       'node/fastify/index': 'src/fastify/index.ts',
+      'react/index': 'src/react/index.ts',
     },
     platform: 'neutral',
   }),
-  deps: { neverBundle: [/^node:/] },
+  deps: { neverBundle: [/^node:/, /^react(?:\/|$)/, /^@tanstack\//] },
+  banner: ({ fileName }) =>
+    /(?:^|\/)react\/index\.mjs$/.test(fileName.replaceAll('\\', '/'))
+      ? { js: "'use client';" }
+      : undefined,
+  inputOptions: {
+    onLog(level, log, defaultHandler) {
+      // Rolldown may drop source directives; the React entry banner preserves this exact one.
+      if (
+        log.code === 'MODULE_LEVEL_DIRECTIVE' &&
+        log.message.includes('use client') &&
+        log.id?.replaceAll('\\', '/').endsWith('/src/react/index.ts')
+      )
+        return;
+      defaultHandler(level, log);
+    },
+  },
   outDir: 'dist',
 };
 

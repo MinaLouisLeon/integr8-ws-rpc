@@ -92,3 +92,67 @@ native reads/progress and scope/group shutdown in addition to the basic probe. P
 locally prepared bytes/EOF; neither helper completion nor the memory regression budget proves
 delivery, persistence, resume/ack behavior or whole-transfer retained memory. Existing size budgets
 and the packed complete-JS ceiling include the new helpers and were not weakened or measured here.
+
+## Approved M5 acceptance — source written, execution pending
+
+M5 was approved on 2026-11-13 and implemented on feature/m5-offline-delivery. The existing helper
+defaults and transport/wire contracts remain unchanged. New adjacent tests and fixtures are written;
+the follow-up's npm run lint and full npm run typecheck now pass on Node 22.22.3. M5 unit/coverage,
+build, size, export, consumer, stress, docs, playground and device checks remain unrun.
+
+| Check | Existing command / method | M5 evidence |
+|---|---|---|
+| Boundary validation and byte accounting | npm test -- src/core/delivery.test.ts | Written; unrun |
+| Queue bounds/FIFO/expiry/cancellation/epochs/reconciliation | npm test -- src/client/createRpcOfflineQueue.test.ts | Written; unrun |
+| Scoped ledger races/retention/reservation/uncertainty/close | npm test -- src/server/createRpcDeliveryLedger.test.ts | Written; unrun |
+| Lost actual socket response after commit; status under another identity | npm test -- src/client/offlineDelivery.test.ts | Written; unrun |
+| Required per-call context and input/result declaration types | npm run typecheck | Passed full source check on Node 22.22.3; packed declarations unrun |
+| Full suite and >=80% source lines | npm run test:coverage | M5 unrun; prior numbers are not M5 coverage |
+| ESM/declarations and unchanged size/export gates | npm run build; npm run size; npm run check:exports | M5 unrun |
+| Packed Node offline admission/ack, browser import graph | npm run check:consumers | Runner/examples expanded; unrun |
+| Browser offline admission followed by Connect | npm run playground; Queue an increment before Connect | Written; UI unrun |
+| Android/iPadOS number-array application mapping | Expo runDevice; offlineAcknowledgedTotal >=1 | Written; physical devices unrun |
+| Stress/smoke/API docs and formatting/lint | npm run test:stress; npm run playground:smoke; npm run docs; npm run lint | M5 verification unrun |
+
+Manually exercise expiry while offline, callback timeout ignoring abort, cancel during dispatch,
+close during reconciliation, terminal auth failure, and server restart after an uncertain mutation.
+Missing status must never resend. Authenticate/authorize every command/status route; a second user
+must not retrieve the first user's result. Server handlers observe the ledger shutdown signal;
+aborting a single RPC observer does not cancel this opt-in process-local execution lifetime.
+
+Retain the exact artifact, commit/dirty diff, commands/environment and safe results. Server restart,
+close, another worker and retention expiry end deduplication protection. Existing finite stress
+budgets and source tests do not prove durability, exactly-once execution or total process bounds.
+
+## Approved M6 acceptance — source written, install and verification pending
+
+Developer approval covers the three-hook /react contract and six exact dependency pins. Run
+npm install first and retain the regenerated package-lock; the old lockfile cannot be used with
+npm ci for this manifest. Approved dependencies/an updated lockfile were already present for the
+follow-up. Lint and full source typecheck now pass on Node 22.22.3; tests/build/pack/SSR/browser
+remain unrun. The agent did not install or edit the lockfile during this follow-up.
+
+| Check | Existing command / method | M6 evidence |
+|---|---|---|
+| Cached state/StrictMode/handle replacement and SSR hydration | npm test -- src/react/useRpcSnapshot.test.ts | Written; unrun |
+| Manual reads/default isolation/cache replacement/cancellation/no retry | npm test -- src/react/useRpcQuery.test.ts | Written; unrun |
+| Explicit offline fail-fast/no replay/concurrency/caller cancellation | npm test -- src/react/useRpcMutation.test.ts | Written; unrun |
+| Safe key/scope/duration boundaries | npm test -- src/react/queryIdentity.test.ts | Written; unrun |
+| Five exports, retained use-client directive and baseline graph isolation | npm run check:exports | Written checks; unrun |
+| Required context and typed variables/results/unknown errors | npm run typecheck | Passed full source check; required and void mutation arguments covered; packed check unrun |
+| Full suite and >=80% source lines | npm run test:coverage | M6 unrun; earlier coverage is not current evidence |
+| Build/API docs and original plus React size gates | npm run build; npm run docs; npm run size | Config/source written; unrun |
+| No-peer runtime/types, React SSR, full baseline/React JS graphs | npm run check:consumers | Four isolated consumers written; unrun |
+| Actual React UI and manual lifecycle behavior | npm run playground:react | Source written; browser unrun |
+| Formatting/lint | npm run lint | Passed: 108 files, zero errors/warnings; no lint-rule changes |
+
+Record StrictMode unmount/remount without connection closure, live handle replacement without old
+cache data, offline manual failures, explicit cancellation, focus/online/reconnect/invalidation
+without calls, and OUTCOME_UNKNOWN without retry. The actual React page must display typed lookup
+and explicit increment only after user actions. No stream hook or native React support is claimed.
+
+The separate packed React graph may include React/Query but never server/Node/Expo code. Baseline
+browser remains 150 KiB gzip, React complete JS 300 KiB, React emitted entry 10 kB excluding peers;
+all existing total/library budgets remain. Preserve measured bytes, exact tarball/lock hashes,
+commit/dirty diff, environment and safe command logs. SSR no-fetch probes and declaration typing
+are not browser/device verification. No persisted/hydrated Query delivery guarantee is implied.

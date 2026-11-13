@@ -39,3 +39,24 @@ PAYLOAD_TOO_LARGE for input beyond the explicit budget, INTERNAL for platform re
 for pre-EOF cancellation. Progress callback exceptions remain application exceptions. Local EOF
 is committed before notifying it; a later abort can release the notification wait without undoing
 EOF. None of these local progress/error states proves an application transfer was committed.
+
+M5 adds no codes. Invalid queue/ledger options or local keys use INVALID_OPTION; malformed remote
+commands/receipts or conflicting scoped-key content use INVALID_MESSAGE. Admission bounds use
+LIMIT_EXCEEDED; input/result payload bounds use PAYLOAD_TOO_LARGE. Ledger result-codec failures
+use safe INTERNAL and preserve an uncertain tombstone. Application handler/delivery errors retain
+their identity, never become success acknowledgements, and never authorize replay.
+
+Unsent queue expiry uses TIMEOUT; invoked expiry/close uses OUTCOME_UNKNOWN. Local cancel/abort uses
+CANCELLED even if server work may already commit. Queue close uses CLOSED for unsent tickets;
+ledger close rejects active observers CLOSED and requests cooperative handler shutdown. Terminal
+AUTH_FAILED/PROTOCOL_MISMATCH rejects unsent tickets with that code and invoked tickets with
+OUTCOME_UNKNOWN. Missing/pending/uncertain receipts leave a ticket unresolved until another bounded
+reconciliation, expiry, cancellation or close. A status lookup failure does not resend the command.
+
+M6 adds no error codes. Explicit query/mutation callbacks reject DISCONNECTED unless the borrowed
+handle is ready, or CLOSED when explicitly closed. Cache scope/key/duration validation uses
+INVALID_OPTION. Query and mutation errors remain the original unknown value for safe narrowing;
+do not claim inference of Promise rejection types or wrap application ORPCError data. Query retry
+and offline pause are disabled, so OUTCOME_UNKNOWN remains visible without replay. Query cancel
+forwards its signal; mutation signals remain caller-owned variables. Neither unmount nor a query
+error is evidence that a handler rolled back. These are source contracts, not executed M6 results.

@@ -6,6 +6,7 @@ const entries = [
   'browser/client/index',
   'node/server/index',
   'node/fastify/index',
+  'react/index',
 ];
 function report(extra: string[] = []) {
   return [
@@ -55,5 +56,24 @@ describe('clean consumer evidence boundaries', () => {
     expect(() => inspectBrowserBundle({ 'entry.js': chunk })).toThrow(
       'Unbundled browser dependency',
     );
+  });
+
+  it('permits React only in the explicitly separate React consumer graph', () => {
+    const chunk = {
+      type: 'chunk',
+      modules: { '/node_modules/react/index.js': {} },
+      imports: [],
+      dynamicImports: [],
+    };
+    expect(() => inspectBrowserBundle({ 'entry.js': chunk })).toThrow('Forbidden browser module');
+    expect(inspectBrowserBundle({ 'entry.js': chunk }, true)).toContain(
+      '/node_modules/react/index.js',
+    );
+    expect(() =>
+      inspectBrowserBundle(
+        { 'entry.js': { ...chunk, modules: { '/node_modules/ws/index.js': {} } } },
+        true,
+      ),
+    ).toThrow('Forbidden browser module');
   });
 });

@@ -72,15 +72,19 @@ const evidence = {
 };
 const evidencePath = ownedPath(recordDirectory, 'evidence.json');
 try {
-  for (const kind of ['node', 'browser']) {
+  for (const kind of ['noPeers', 'node', 'browser', 'react']) {
     const directory = ownedPath(workspace, kind);
     await mkdir(directory);
-    const dependencyNames = [
-      '@orpc/client',
-      '@orpc/server',
-      'zod',
-      ...(kind === 'node' ? ['fastify'] : []),
-    ];
+    const dependencyNames =
+      kind === 'noPeers'
+        ? []
+        : [
+            '@orpc/client',
+            '@orpc/server',
+            'zod',
+            ...(kind === 'node' ? ['fastify'] : []),
+            ...(kind === 'react' ? ['react', 'react-dom', '@tanstack/react-query'] : []),
+          ];
     const dependencies = Object.fromEntries(
       dependencyNames.map((name) => [
         name,
@@ -92,7 +96,16 @@ try {
       typescript: manifest.devDependencies.typescript,
       ...(kind === 'node'
         ? { '@types/node': manifest.devDependencies['@types/node'] }
-        : { vite: manifest.devDependencies.vite }),
+        : kind === 'noPeers'
+          ? {}
+          : { vite: manifest.devDependencies.vite }),
+      ...(kind === 'react'
+        ? {
+            '@types/react': manifest.devDependencies['@types/react'],
+            '@types/react-dom': manifest.devDependencies['@types/react-dom'],
+            '@types/node': manifest.devDependencies['@types/node'],
+          }
+        : {}),
     };
     await writeFile(
       ownedPath(directory, 'package.json'),
@@ -108,40 +121,61 @@ try {
         2,
       ),
     );
-    await copyFile(ownedPath(root, 'playground', 'router.ts'), ownedPath(directory, 'router.ts'));
+    if (kind !== 'noPeers') {
+      await copyFile(ownedPath(root, 'playground', 'router.ts'), ownedPath(directory, 'router.ts'));
+      await copyFile(
+        ownedPath(root, 'playground', 'offlineClient.ts'),
+        ownedPath(directory, 'offlineClient.ts'),
+      );
+      await copyFile(
+        ownedPath(root, 'fixtures', 'consumers', 'assertTypes.ts'),
+        ownedPath(directory, 'assertTypes.ts'),
+      );
+    }
     await copyFile(
-      ownedPath(root, 'fixtures', 'consumers', 'assertTypes.ts'),
-      ownedPath(directory, 'assertTypes.ts'),
+      kind === 'react'
+        ? ownedPath(root, 'playground', 'react', 'main.ts')
+        : ownedPath(
+            root,
+            'fixtures',
+            'consumers',
+            kind === 'node' ? 'node.mts' : kind === 'noPeers' ? 'noPeers.mts' : 'browser.ts',
+          ),
+      ownedPath(directory, kind === 'node' || kind === 'noPeers' ? 'main.mts' : 'main.ts'),
     );
-    await copyFile(
-      ownedPath(root, 'fixtures', 'consumers', kind === 'node' ? 'node.mts' : 'browser.ts'),
-      ownedPath(directory, kind === 'node' ? 'main.mts' : 'main.ts'),
-    );
+    if (kind === 'react') {
+      for (const name of ['assertReactTypes.ts', 'reactSsr.mts']) {
+        await copyFile(ownedPath(root, 'fixtures', 'consumers', name), ownedPath(directory, name));
+      }
+    }
     if (kind === 'browser') {
       await copyFile(
         ownedPath(root, 'fixtures', 'expo', 'runDevice.ts'),
         ownedPath(directory, 'runDevice.ts'),
       );
+    }
+    if (kind === 'browser' || kind === 'react')
       await writeFile(
         ownedPath(directory, 'index.html'),
-        '<!doctype html><html lang="en"><title>Packed consumer</title><body><script type="module" src="/main.ts"></script></body></html>',
+        '<!doctype html><html lang="en"><title>Packed consumer</title><body><div id="root"></div><script type="module" src="/main.ts"></script></body></html>',
       );
-    }
     await writeFile(
       ownedPath(directory, 'tsconfig.json'),
       JSON.stringify(
         {
           compilerOptions: {
             target: 'ES2024',
-            module: kind === 'node' ? 'NodeNext' : 'ESNext',
-            moduleResolution: kind === 'node' ? 'NodeNext' : 'Bundler',
+            module:
+              kind === 'node' || kind === 'noPeers' || kind === 'react' ? 'NodeNext' : 'ESNext',
+            moduleResolution:
+              kind === 'node' || kind === 'noPeers' || kind === 'react' ? 'NodeNext' : 'Bundler',
             strict: true,
             noEmit: true,
             skipLibCheck: false,
             verbatimModuleSyntax: true,
             allowImportingTsExtensions: true,
             lib: ['ES2024', 'DOM', 'DOM.Iterable'],
-            types: kind === 'node' ? ['node'] : [],
+            types: kind === 'node' || kind === 'react' ? ['node'] : [],
           },
           include: ['*.ts', '*.mts'],
         },
@@ -151,7 +185,17 @@ try {
     );
     await run(
       process.execPath,
-      [npmCli, 'install', '--ignore-scripts', '--no-audit', '--no-fund'],
+      [
+        npmCli,
+        'install',
+        '--ignore-scripts',
+        '--no-audit',
+        '--no-fund',
+        // Vite sets NODE_ENV=production in this process; later installs still need dev tools.
+        '--include=dev',
+        // Browser builds require Rolldown's optional native binding.
+        ...(kind === 'noPeers' || kind === 'node' ? ['--omit=optional'] : ['--include=optional']),
+      ],
       directory,
     );
     const require = createRequire(ownedPath(directory, 'package.json'));
@@ -161,6 +205,19 @@ try {
         require.resolve(name).startsWith(installed),
         `Consumer dependency resolved outside its install: ${name}`,
       );
+    }
+    if (kind !== 'react') {
+      for (const name of [
+        'react',
+        'react-dom',
+        '@tanstack/react-query',
+        '@types/react/package.json',
+      ]) {
+        assert.throws(
+          () => require.resolve(name),
+          `Optional React peer unexpectedly installed: ${name}`,
+        );
+      }
     }
     await run(process.execPath, [require.resolve('typescript/bin/tsc'), '--noEmit'], directory);
     await copyFile(
@@ -175,8 +232,9 @@ try {
       .update(await readFile(ownedPath(directory, 'package-lock.json')))
       .digest('hex');
     evidence.consumers[kind] = { lockSha256 };
-    if (kind === 'node') await run(process.execPath, ['main.mts'], directory);
+    if (kind === 'node' || kind === 'noPeers') await run(process.execPath, ['main.mts'], directory);
     else {
+      if (kind === 'react') await run(process.execPath, ['reactSsr.mts'], directory);
       const { build } = await import(pathToFileURL(require.resolve('vite')).href);
       let graph;
       let gzipBytes = 0;
@@ -188,14 +246,14 @@ try {
           {
             name: 'ws-rpc-browser-boundary',
             generateBundle(_options, bundle) {
-              graph = inspectBrowserBundle(bundle);
+              graph = inspectBrowserBundle(bundle, kind === 'react');
               for (const output of Object.values(bundle)) {
                 if (output.type === 'chunk') gzipBytes += gzipSync(output.code).byteLength;
               }
               // Initial complete JS consumer budget; dependency costs are included, not treated as zero.
               assert(
-                gzipBytes <= 150 * 1024,
-                'Packed browser JS exceeds the 150 KiB gzip fixture budget.',
+                gzipBytes <= (kind === 'react' ? 300 : 150) * 1024,
+                `Packed ${kind} JS exceeds its ${kind === 'react' ? 300 : 150} KiB gzip fixture budget.`,
               );
             },
           },
@@ -207,7 +265,7 @@ try {
         'Browser consumer did not include the installed artifact.',
       );
       evidence.consumers[kind] = { lockSha256, graph, gzipBytes };
-      await cp(ownedPath(directory, 'dist'), ownedPath(recordDirectory, 'browser-dist'), {
+      await cp(ownedPath(directory, 'dist'), ownedPath(recordDirectory, `${kind}-dist`), {
         recursive: true,
       });
     }

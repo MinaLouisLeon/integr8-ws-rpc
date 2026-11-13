@@ -5,16 +5,23 @@ typecheck. It is not packed/browser/native runtime evidence.
 
 `consumers/` imports only the installed public package entries. npm run check:consumers requires a
 built dist and a developer-selected package version. It invokes npm pack with scripts disabled,
-validates the file inventory, creates isolated Node/browser directories outside the repository, installs
+validates the file inventory, creates isolated no-peer/Node/browser/React directories outside the repository, installs
 the exact tarball plus the already approved tool versions, typechecks without source paths/aliases,
 runs a real loopback Node exchange and bundles the browser entry. Installation intentionally occurs
 only when the developer invokes this command; it does not change the repository's manifest/lockfile.
 
-Browser graph inspection rejects server/Node/React/Expo modules, missing chunks and external imports,
+Baseline browser graph inspection rejects server/Node/React/Query/Expo modules, missing chunks and external imports,
 including lazy chunks. The entry instantiates a lazy handle so tree-shaking cannot make the whole
 client disappear. The complete emitted JS has an initial 150 KiB gzip fixture ceiling; the evidence
 records measured bytes, not just the library entry. This is a regression budget, not a measurement
 already obtained. Browser bundling is separate from the real-browser playground acceptance run.
+
+M6 adds a clean no-peer runtime/declaration consumer (optional peers are omitted and their absence
+asserted) and a separate React consumer with the exact approved peers/types. The React consumer
+compiles required-context/input/output fixtures, executes an SSR no-fetch probe and builds the
+actual React playground entry. Its full JS graph includes React/Query, forbids server/Node/native
+modules and has its own 300 KiB gzip budget. It does not weaken the baseline 150 KiB budget.
+No M6 consumer has run; root npm install/lockfile regeneration is required before these checks.
 
 Each run retains its tarball, browser output, copied consumer manifests/lockfiles and evidence.json
 under .artifacts; installations stay in a separate retained temporary directory. This avoids fallback

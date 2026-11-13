@@ -17,6 +17,7 @@ export async function inspectPackage(rootDirectory) {
     '.',
     './client',
     './fastify',
+    './react',
     './server',
   ]);
   const files = await listFiles(dist);
@@ -36,6 +37,20 @@ export async function inspectPackage(rootDirectory) {
       await readFile(absolute);
     }
   }
+  const reactPath = resolve(root, manifest.exports['./react'].default);
+  const reactSource = ts.createSourceFile(
+    reactPath,
+    await readFile(reactPath, 'utf8'),
+    ts.ScriptTarget.Latest,
+  );
+  const first = reactSource.statements[0];
+  assert(
+    first &&
+      ts.isExpressionStatement(first) &&
+      ts.isStringLiteral(first.expression) &&
+      first.expression.text === 'use client',
+    'React entry must preserve use client as its first directive.',
+  );
   const entries = ['.', './client'].map((key) => resolve(root, manifest.exports[key].default));
   const visited = new Set();
   for (const entry of entries) {

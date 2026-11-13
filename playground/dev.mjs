@@ -3,6 +3,7 @@ import { createServer } from 'vite';
 import { startExample } from './server.mjs';
 
 const app = await startExample();
+const react = process.argv.includes('--react');
 let browser;
 let closing;
 function close() {
@@ -15,7 +16,7 @@ function close() {
 try {
   browser = await createServer({
     configFile: false,
-    root: fileURLToPath(new URL('./browser/', import.meta.url)),
+    root: fileURLToPath(new URL(react ? './react/' : './browser/', import.meta.url)),
     server: {
       host: '127.0.0.1',
       port: 5173,

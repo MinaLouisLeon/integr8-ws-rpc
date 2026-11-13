@@ -25,3 +25,23 @@ two-byte slices and local prepared-byte progress, followed by replies from the a
 binarySize procedure. Its displayed local done flag is not an acknowledgement or persistence promise.
 Real multi-server isolation is characterized separately with distinct typed/authenticated server
 handles in independentHandles.test.ts; the browser example's single group entry is not that proof.
+
+M5: press Queue an increment before Connect. The explicit queue retains bounded encoded input;
+Connect dispatches it and a completed application receipt prints the acknowledged total. Pressing
+Typed lookup while offline still fails immediately. Close disposes the queue before the connection.
+The application's delivery.increment/status routes validate number arrays and derive scope from
+authenticated context; helper bytes are mapped at that boundary. Receipts and deduplication live
+only in this server process. Reload/restart loses them, and local cancellation does not prove the
+mutation rolled back. The new browser flow has not run; real lost-response/reconciliation source
+is in src/client/offlineDelivery.test.ts and remains developer-run.
+
+M6 opt-in example: after installing approved dependencies and regenerating the lockfile, run
+npm run playground:react. It uses the same loopback host/fake credentials and port 5173. The React
+entry shows connection state, manual lookup and explicit increment under a caller-owned
+QueryClientProvider/StrictMode root. Read/mutate before ready must fail immediately; connecting
+afterwards must not replay those calls. Closing is terminal; reload creates a new handle.
+
+Observe that focus, browser online/offline, rerender and transport reconnect never issue a lookup
+or mutation without another explicit action. Pagehide unmounts React, clears the example cache
+and closes its owned connection. The hooks themselves do not own that connection. The new flow
+has not run; source typing, SSR probes and successful HTTP responses are not browser acceptance.
