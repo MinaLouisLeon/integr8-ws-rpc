@@ -51,5 +51,6 @@ jobs:
         with:
           name: ws-rpc-consumer-evidence
           path: fixtures/.artifacts/
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 14

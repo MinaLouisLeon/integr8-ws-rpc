@@ -637,3 +637,22 @@ directed fixing, committing and pushing with all checks on GitHub only. Added in
 dependency, public API, workflow check or acceptance gate was changed. No local implementation
 checks ran for this fix. GitHub results are pending developer review; packed consumer/runtime
 success and full milestone acceptance are not claimed. No publication, tag or release.
+
+PR #1 consumer follow-up (2026-11-12): run 43235309171 at fc8a291 passes all three
+Node 24 OS jobs, including packed export checks. The isolated Node consumer compilation fails
+with TS2307: @orpc/shared 1.16.2 declarations import @opentelemetry/api unconditionally, but
+upstream marks that peer optional and the clean install omits it. Proposed direct dependency
+@opentelemetry/api 1.9.0 (Apache-2.0, approximately 1.22 MB unpacked, no dependencies) awaits
+developer approval. No local implementation checks or installs ran. Consumer/browser/stress/docs
+success is not established by this run.
+
+Enabled include-hidden-files on the consumer artifact upload: its existing .artifacts directory
+was excluded by the action default, so even retained failure evidence was not uploaded. The
+upload remains restricted to fixtures/.artifacts and retains the existing 14-day policy.
+
+Consumer fix delivery (2026-11-13): following the dependency proposal, the developer directed
+commit and push. Added @opentelemetry/api 1.9.0 as a direct runtime dependency with matching
+registry integrity/license/engine metadata in the lockfile, without a local install. This
+satisfies the upstream declaration dependency for isolated consumers while preserving
+skipLibCheck:false and the existing public/wire contracts. The artifact-upload correction is
+included. No local checks ran; GitHub verification remains pending developer review.
