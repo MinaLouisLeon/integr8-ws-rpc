@@ -33,6 +33,7 @@ export function validatePackReport(reports) {
     'browser/client/index',
     'node/server/index',
     'node/fastify/index',
+    'react/index',
   ]) {
     assert(
       files.includes(`dist/${entry}.mjs`) && files.includes(`dist/${entry}.d.mts`),
@@ -54,7 +55,7 @@ export function ownedPath(root, ...segments) {
 }
 
 /** Audit real bundle module IDs and unresolved imports, including dynamically imported chunks. */
-export function inspectBrowserBundle(bundle) {
+export function inspectBrowserBundle(bundle, allowReact = false) {
   const modules = new Set();
   for (const output of Object.values(bundle)) {
     if (output.type !== 'chunk') continue;
@@ -62,9 +63,13 @@ export function inspectBrowserBundle(bundle) {
       const normalized = id.replaceAll('\\', '/');
       assert(
         !normalized.includes('__vite-browser-external') &&
-          !/(?:^|\/)node_modules\/(?:@orpc\/server|fastify|@fastify|ws|react|react-native|expo)(?:\/|$)/.test(
+          !/(?:^|\/)node_modules\/(?:@orpc\/server|fastify|@fastify|ws|react-native|expo)(?:\/|$)/.test(
             normalized,
           ) &&
+          (allowReact ||
+            !/(?:^|\/)node_modules\/(?:react|react-dom|@tanstack\/(?:react-query|query-core))(?:\/|$)/.test(
+              normalized,
+            )) &&
           !normalized.startsWith('node:'),
         `Forbidden browser module: ${normalized}`,
       );

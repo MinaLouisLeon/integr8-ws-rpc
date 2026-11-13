@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import { registerRpcWebSocket } from '../dist/node/fastify/index.mjs';
 import { createRpcServer } from '../dist/node/server/index.mjs';
-import { exampleRouter } from './router.ts';
+import { exampleDeliveryLedger, exampleRouter } from './router.ts';
 
 /** Start an example application, not a product authentication service. */
 export async function startExample({ port = 0, origin = 'http://127.0.0.1:5173' } = {}) {
@@ -21,6 +21,7 @@ export async function startExample({ port = 0, origin = 'http://127.0.0.1:5173' 
   const close = async () => {
     await adapter.dispose();
     await server.close();
+    await exampleDeliveryLedger.close();
     await app.close();
   };
   try {

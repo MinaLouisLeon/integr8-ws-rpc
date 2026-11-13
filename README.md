@@ -5,7 +5,7 @@ and context. Server/tooling target Node 24; root/client imports must remain brow
 
 ## Implementation status
 
-Source is written on `feature/m0-scaffold`, branched from local `dev` at `fd93759`:
+Current M5/M6 source is on `feature/m5-offline-delivery`, branched from local `dev` at `dd2b5a3`:
 
 - `/client`: `createRpcClient` with lazy authenticated connect, typed calls, safe snapshots,
   finite reconnect, heartbeat and opt-in managed resubscription with gap notifications.
@@ -15,15 +15,14 @@ Source is written on `feature/m0-scaffold`, branched from local `dev` at `fd9375
   detection and disposal that closes owned peers while preserving the host and unrelated routes.
 - Stream item/byte accounting before ClientPeer queues events, cancellation lifetimes,
   adjacent regression tests, compile fixtures and a loopback smoke playground.
+- Explicit M5 queue/receipt-ledger helpers and optional M6 React/Query hooks are written below.
 
-**Local checks now include 131 passing tests (89.73% line coverage), build, size, docs, smoke and
-native stress on Node 22.22.3.** Node 24 target verification and packed-package checks remain open;
-see [verification results](docs/verification-2026-11-12.md). M0/M1 gates remain open. The complete
-client handle requires lifecycle/stream foundations associated with M2; M2 is not complete either.
-M3 consumer/tooling and approved M4 helper sources are written; runtime acceptance and M5–M6 remain pending.
-No package version is selected; the
-manifest remains private with its version unset. A package-lock.json is present. This branch is
-prepared for a draft PR into dev; no publication or completed release gate is claimed.
+Earlier [verification results](docs/verification-2026-11-12.md) include 131 local tests and
+build/size/docs/smoke/stress evidence. Those results predate M5/M6 and do not verify this checkout.
+M5/M6 lint and the full source typecheck now pass on local Node 22.22.3 after explicit developer
+authorization. Tests, builds, packed/browser/device and target-runtime acceptance remain open.
+Private version 0.1.0 is selected; no publication or completed release gate is claimed. Approved
+dependencies and an updated lockfile were present before this follow-up; the agent did not install.
 
 See [SPEC and progress](docs/SPEC.md), [dependency approvals](docs/dependency-proposal.md),
 [compatibility](docs/transport-compatibility.md), [errors](docs/errors.md) and
@@ -62,10 +61,9 @@ on its public configuration. No new runtime-support promise is made by these fix
 ## Developer-run checks
 
 AGENTS.md reserves installs and implementation commands for the developer. Use Node 24.11+ for the
-approved tooling. Set the initial version before relying on packed-package checks; npm install
-creates the required package-lock.json. Existing commands are listed below. Lint and the full
-typecheck (including browser/test/config projects and inference fixtures) pass under the developer's
-explicit overrides. Runtime tests, builds and the other checks remain unrun by the agent.
+approved tooling. Run npm install first to resolve the approved M6 pins and regenerate package-lock;
+an old lockfile is not sufficient for npm ci. Existing commands are listed below. M5/M6 lint and
+the full typecheck pass in the current follow-up; tests/build/consumer evidence remain pending.
 
 ```sh
 npm run lint
@@ -199,7 +197,8 @@ test helpers or internal built chunks. Select one compatible oRPC release line; 
 the approved 1.16.2 APIs, not v2 adapter examples. Keep server router imports type-only in clients.
 For pre-publication use, record the exact tarball SHA-256 and lockfile rather than invent an npm
 version. The approved M4 extension adds exactly the two /client helpers documented below. M5 offline
-delivery and M6 React/Query remain follow-ons; no extra package subpaths are added.
+delivery is an approved opt-in source extension below. Approved M6 adds only the optional /react
+subpath; existing root/client/server/Fastify entries retain their public contracts.
 
 ## Named client groups (M4)
 
@@ -260,3 +259,163 @@ Raw chunk size is not encoded message size. Existing frame/high-water/stream lim
 Node/browser example checks explicitly characterize this boundary. Source-read failures use safe
 INTERNAL, caller cancellation uses CANCELLED. These helpers and native Blob compatibility still
 need runtime/packed/device verification; no new runtime support promise is made.
+
+## Explicit offline delivery (M5)
+
+`createRpcOfflineQueue` from `/client` borrows an existing connection and handles one typed command
+family. `createRpcDeliveryLedger` from `/server` provides process-local scoped deduplication and
+receipts. The [approved contract](docs/superpowers/specs/2026-11-13-m5-offline-delivery-design.md)
+defines the full surface; [playground/offlineClient.ts](playground/offlineClient.ts) and
+[playground/router.ts](playground/router.ts) show matching application command/status procedures.
+
+```ts
+import { createRpcOfflineQueue } from '@integr8-media/ws-rpc/client';
+
+const queue = createRpcOfflineQueue({
+  connection, // Already-created typed client; the application still owns connect/close.
+  maxEntries: 8,
+  maxBytes: 4096,
+  maxEntryBytes: 64,
+  maxAgeMs: 30_000,
+  attemptTimeoutMs: 5000,
+  encode: encodeCommand,       // (input: Input) => Uint8Array, synchronous application codec.
+  decode: decodeCommand,       // (bytes: Uint8Array) => Input, validates a fresh copy.
+  decodeResult,                // (bytes: Uint8Array) => Result, validates server result bytes.
+  deliver: sendCommand,        // (typedClient, command, signal, decodedInput) => receipt.
+  reconcile: lookupReceipt,    // (typedClient, key, signal) => receipt, read-only.
+});
+const ticket = queue.enqueue(input, { key: logicalOperationKey, signal });
+await connection.connect();
+const result = await ticket.result; // Only a validated completed receipt resolves this promise.
+await queue.close();                // Releases this queue; leaves connection ownership alone.
+```
+
+Keys are non-secret, unique per logical operation, matching `[A-Za-z0-9_-]{1,128}`. maxEntries ranges
+from 1 to 10,000; required byte budgets are positive safe integers, maxEntryBytes <= maxBytes;
+required durations are integers from 1 to 2,147,483,647 ms. Input/result payloads each fit
+maxEntryBytes. Queued, dispatching and uncertain tickets all consume capacity. Admission is
+synchronous and copies actual encoded bytes. Snapshots freeze counters, key/state/expiry and safe
+codes without payloads. subscribe observes future changes; read getSnapshot for the initial value.
+
+Retained bytes are input bytes + UTF-8 key bytes + 16 metadata bytes per ticket. The ledger includes
+UTF-8 scope bytes and reserves maxEntryBytes for result bytes before invoking the handler. JS
+objects, codec work, transient copies, encoded transport overhead and caller-held data are outside
+that accounting; it is not a total-process memory bound. Existing socket/frame caps still apply.
+
+Unsent commands dispatch FIFO, one callback at a time when ready. Pending/uncertain/missing receipts
+never trigger resubmission. After a lost response, the next ready epoch makes at most one read-only
+status lookup; queue.reconcile(key) allows another explicit lookup. There is no polling loop. A
+callback that ignores its abort signal blocks later callbacks until it settles, while local close
+and ticket expiry remain available. Close ignores late callbacks and never waits indefinitely.
+
+Before dispatch, expiry means TIMEOUT and cancellation means CANCELLED. After invocation, expiry
+or close means OUTCOME_UNKNOWN; cancellation rejects CANCELLED locally without proving rollback.
+The ticket's cancel method is idempotent. Close rejects unsent work CLOSED. A closed borrowed
+connection closes the queue too. Terminal auth/protocol failure rejects pending work; do not change
+the authenticated principal behind a queue's connection. New identity requires a new queue/handle.
+
+Server setup requires maxEntries/maxBytes/maxEntryBytes, retentionMs/maxCommandAgeMs and
+encodeResult/decodeResult. Call ledger.execute(authenticatedScope, command, (payload, signal) =>
+runValidatedCommand(payload, signal)) inside an authenticated, authorized application procedure;
+ledger.lookup(authenticatedScope, key) belongs in an equally guarded read-only status procedure.
+Scope includes stable authenticated identity and operation, is non-secret and at most 256 UTF-8
+bytes. Never accept scope from client input or use a session ID as the durable identity.
+
+The helper command is `{ key, expiresAt, payload: Uint8Array }`. Receipt state is pending, uncertain,
+completed (with result bytes), or missing (key only, no known expiry). The application owns the wire
+schema and validates/maps its byte representation. The examples use bounded number arrays because
+oRPC 1.16.2's default JSON serializer does not preserve typed arrays. No raw frame or reserved
+transport procedure is introduced.
+
+Ledger execution has its own shutdown signal: disconnecting/cancelling one RPC observer does not
+remove the record or cancel that mutation. Identical concurrent submissions join it; conflicting
+payload/expiry fails INVALID_MESSAGE. Handler errors propagate unchanged to active callers, while
+the ledger retains a safe uncertain tombstone. Codec/oversize-result failures also retain uncertainty.
+Wire error mapping remains application-owned; do not serialize raw exceptions.
+
+Pending records stay pinned even after expiry. Settled records stay until
+max(expiresAt, settledAt) + retentionMs; retentionMs must cover maxCommandAgeMs. Full ledgers reject
+new work rather than evict live records. lookup/admission prune expired settled records without
+background timers. Close aborts ledger-owned work but cannot force a handler to roll back.
+
+Queues and ledgers are memory-only. Reload, restart, close, another worker or retention expiry ends
+their protection. A receipt means the handler resolved and result bytes were retained locally;
+business commit/persistence is the handler's responsibility. No durable or exactly-once guarantee.
+M5 source compilation/lint pass; runtime/packed/browser/device verification remains pending.
+
+## Optional React and Query hooks (M6)
+
+Import useRpcSnapshot/useRpcQuery/useRpcMutation only from `@integr8-media/ws-rpc/react`. The
+optional peers are React ^19.0.0 and @tanstack/react-query ^5.107.1, plus @types/react ^19.0.0 for
+TypeScript. The entire /react entry requires both runtime peers, even for a snapshot-only Node ESM
+import. Existing entry points remain usable without those peers; the new no-peer fixture checks
+both declaration compilation and runtime import. This boundary is written, not yet pack-verified.
+
+The application creates and owns a stable connection and QueryClient/QueryClientProvider. Hooks
+never connect, close, create credentials or choose storage. Keep connections stable across renders;
+create new handles when identity changes and use a separate QueryClient per account/request.
+
+```ts
+import { useRpcSnapshot, useRpcQuery, useRpcMutation } from '@integr8-media/ws-rpc/react';
+
+// Inside a component/custom hook beneath the application's QueryClientProvider:
+const snapshot = useRpcSnapshot(connection);
+const read = useRpcQuery({
+  connection,
+  cacheScope: 'account_server',
+  queryKey: ['lookup', id],
+  query: (client, signal) => client.lookup({ id }, { signal }),
+});
+const write = useRpcMutation({
+  connection,
+  cacheScope: 'account_server',
+  mutationKey: ['rename'],
+  mutation: (client, input: { id: string; name: string }) => client.rename(input),
+});
+// User actions explicitly call connection.connect(), read.refetch(), or write.mutate(input).
+```
+
+Reads are **manual only**. Render/mount/remount, reconnect, focus, browser-online events and cache
+invalidation do not execute them. Query retry/polling/render-prefetch/Suspense are disabled, even
+under global Query defaults. Initial/placeholder data is suppressed to avoid showing an old
+handle's data. staleTime/gcTime may be finite integer milliseconds 0..2,147,483,647; other Query
+policy options are intentionally not accepted. Direct QueryClient fetching/persistence APIs and
+application global callbacks remain application-owned and outside these hook guarantees.
+
+Explicit reads/mutations check the current handle immediately before invoking application code:
+DISCONNECTED unless ready, CLOSED when explicitly closed. networkMode:always prevents an offline
+Query pause from becoming a later unexpected execution. Both helpers fix retry:false. An explicit
+refetch/mutate after an unknown outcome is a new application request, not automatic reconciliation.
+Use the application's status procedure or M5 queue reconciliation deliberately when needed.
+
+Query callbacks receive the actual per-execution AbortSignal; pass it into the typed oRPC call.
+Unmount or Query cancel requests cooperative cancellation, not rollback. Mutations have no
+automatic signal: include one in typed variables if needed. Unmount stops UI observation without
+closing the connection or cancelling a mutation. Original failures are preserved as unknown in
+the hook result because Promise rejection types cannot be inferred; narrow RpcError/ORPCError.
+
+cacheScope is a non-secret ASCII identifier matching [A-Za-z0-9_-]{1,128}; queryKey/mutationKey is
+a nonempty readonly QueryKey containing the relevant inputs. Keys must follow Query's serializable
+key conventions and must not contain credentials. Effective keys add a weak per-handle identity,
+so separate handles do not share cache entries within this loaded integration. Old in-flight work
+retains its old key; replacing a handle does not show old query/mutation results. Query data and
+mutation variables/results remain in caller-owned Query caches; clear them on logout as needed.
+
+useRpcSnapshot requires no provider and observes the existing cached frozen state through
+useSyncExternalStore. SSR/initial hydration return a stable idle snapshot, then switch to live
+state. Hooks do not fetch on the server. SSR data hydration/dehydration, persistent caches and
+cross-process connection IDs are not supported by this initial integration. Do not share a
+server-process QueryClient across users.
+
+Streams continue through the original managed subscription API. In an effect, create the
+subscription and return a synchronous cleanup that invokes its async unsubscribe method; keep
+open/callback dependencies stable and handle next/error/complete/gap deliberately. The component
+owns that subscription, while the connection remains application-owned. No stream-to-cache queue
+or additional resubscription owner is introduced.
+
+Run `npm run playground:react` after installation/build to open the fake-token loopback example.
+It provides explicit Connect, Read lookup, Send increment and Close actions under StrictMode.
+The library exports no UI. This flow, hook tests and packed React/no-peer consumers remain unrun.
+React entry JS has a 10 kB gzip budget excluding peers; the separate packed React bundle has a
+300 KiB complete-JS budget including peers. Baseline browser 150 KiB and existing total/library
+budgets are unchanged. See [M6 acceptance](docs/acceptance.md) before claiming compatibility.

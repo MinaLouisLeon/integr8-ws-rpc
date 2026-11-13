@@ -2,7 +2,8 @@
 
 Created 2026-11-11 for the repository folder `integr8-wc-rpc`.
 
-**Status:** initial implementation baseline; no source, dependencies or runtime verification yet.
+**Status:** M0–M6 source is written; acceptance and current-checkout verification remain separate.
+See Progress for chronological records; M5/M6 lint/typecheck pass, runtime/build acceptance is open.
 The user approved the package boundary and Phase 02 scope. Concrete defaults and API names below
 are design decisions recorded by this spec, not claims of previously approved versions or tested
 behavior. M0 must confirm the dependency line and type mapping before transport implementation.
@@ -78,6 +79,7 @@ src/
   client/index.ts           # browser-compatible createRpcClient
   server/index.ts           # Node createRpcServer
   fastify/index.ts          # Node registerRpcWebSocket adapter
+  react/index.ts            # optional React/Query hooks; isolated from initial runtime graph
 playground/                 # server, Node client and browser client; no real credentials
 fixtures/                   # clean Node/browser/Expo consumers and packed-export checks
 docs/SPEC.md
@@ -89,6 +91,9 @@ Public initial subpaths: package root, `/client`, `/server`, `/fastify`. The roo
 not import Node built-ins, Fastify, ws, React, DOM globals at module initialization or native Expo
 APIs. Accept a platform WebSocket factory instead of importing a global during module evaluation.
 Server code must not import client platform adapters.
+
+Approved M6 adds only optional `/react`. Existing entries must import and typecheck without its
+optional React/Query/type peers; hooks are not re-exported through root/client.
 
 ESM TypeScript; Node 24 server/tooling. Emit declarations and use strict/isolated-declaration
 compatible exports. Runtime adapters select the appropriate implementation. Node clients supply
@@ -111,8 +116,13 @@ exports just to expose all upstream internals.
 | createRpcClient | /client | Return a typed connection handle without opening a socket until connect() |
 | createRpcClientGroup | /client | Own a static typed registry of independent client handles under the approved M4 contract |
 | chunkBinary | /client | Pull bounded binary copies with explicit total byte budget and local-only progress under the approved M4 contract |
+| createRpcOfflineQueue | /client | Explicit bounded in-memory unary submission and read-only outcome reconciliation under the approved M5 contract |
+| createRpcDeliveryLedger | /server | Authenticated caller-scoped process-local receipt/deduplication ownership under the approved M5 contract |
 | createRpcServer | /server | Compose an application router with reserved handshake/health procedures and auth guard |
 | registerRpcWebSocket | /fastify | Attach that server to a caller-owned Fastify instance and configurable path |
+| useRpcSnapshot | /react | Observe a caller-owned connection; stable idle SSR/hydration snapshot |
+| useRpcQuery | /react | Manual-only typed Query reads; caller cache/connection ownership |
+| useRpcMutation | /react | Explicit typed mutations without retry/offline pause/automatic replay |
 
 ### Client handle
 
@@ -311,11 +321,28 @@ Specify expiry, count/byte bounds, persistence ownership, cancellation, server a
 idempotency keys/deduplication retention and outcome reconciliation first. No exactly-once promise.
 Until this milestone is reviewed, offline calls continue to reject immediately.
 
+M5 contract approved by the developer on 2026-11-13:
+[offline queue and receipt ledger](superpowers/specs/2026-11-13-m5-offline-delivery-design.md).
+The two named helpers above are opt-in; ordinary client calls still fail fast and uncertain calls
+are never replayed. Queue/ledger storage is in memory only. Required count/byte/expiry/attempt and
+retention budgets, caller-authenticated scopes, application-routed acknowledgements, cancellation
+and read-only reconciliation are defined in that contract. No transport version/procedure, error
+code, connection default, package entry path or dependency changes. Durable/multi-process delivery
+requires a separate reviewed contract and is not implied by M5.
+
 ### M6 — React and TanStack integration (follow-on)
 
 Optional `/react` entry with React peer and Query integration only after actual consumer needs are
 known. Keep hooks independent of product storage and state; no visual UI. Root/client imports stay
 free of these optional peers. Review additions to the export/dependency contract before coding.
+
+M6 contract and exact dependency proposal approved by the developer on 2026-11-13:
+[React/Query hooks](superpowers/specs/2026-11-13-m6-react-query-design.md) and
+[dependency ledger](m6-dependency-proposal.md). Exactly the three hooks above are added to /react.
+Queries are manual; mutations explicit. No automatic connection ownership, query retry/refetch,
+M5 enqueue, cache persistence or stream-to-cache buffer is introduced. The caller owns identity,
+QueryClientProvider and connection lifecycle. Optional peers/dev pins, isolated package/build and
+size gates are specified in the approved documents. Existing contracts/defaults remain unchanged.
 
 ## 9. Required verification scenarios
 
@@ -350,12 +377,13 @@ Update this section after each task; never infer verification from source presen
 | M2 streams / lifecycle | Client-handle foundations written; gate open | No | Finite retries, heartbeat, epochs, managed opt-in resubscription/gaps, retained iterator cancellation and pre-peer stream accounting written to implement the complete public handle. Stress, cleanup, lifecycle and platform acceptance remain unverified; not a completed M2 delivery. |
 | M3 consumers / first slice | Consumer/playground/stress/release-tooling source written; gate open | Source compile/lint only; runtime pending | Packed Node/browser runner, declaration fixtures, Expo device probe, real browser playground, native stress scenarios, CHANGELOG/acceptance docs and pinned shared CI/hooks written. No packed install/build/browser/native/stress/coverage/CI execution; initial version and all runtime/device gates remain open. |
 | M4 multi-server / binary helpers | Approved helpers, tests and consumer examples written; gate open | Compile/lint only; runtime pending | createRpcClientGroup/chunkBinary added only to /client under the approved contract. Typed fixtures preserve heterogeneous schemas/required context. Lifecycle/binary/encoded-limit/runtime/device and packed acceptance remain unrun. |
-| M5 offline queue | No | No | Follow-on |
-| M6 React / Query | No | No | Follow-on |
+| M5 offline queue | Approved queue/ledger source, tests, fixtures and examples written; acceptance open | Lint/full source typecheck pass on Node 22.22.3 | `feature/m5-offline-delivery` from local `dev` at `dd2b5a3`; tests/runtime/packed/device acceptance remains open. Ordinary calls remain fail-fast; uncertain commands are reconciled without replay. |
+| M6 React / Query | Approved hooks/tests/build/consumer/example source written; acceptance open | Lint/full source typecheck pass on Node 22.22.3 | Current feature/m5-offline-delivery retained with M5 edits. Approved dependencies and updated lockfile were already present for follow-up. Runtime/build/packed/browser acceptance remains open. |
 
 The entries below are chronological task records; the table above describes current status.
-No package version is selected, published or claimed. No tests, installs, builds or application
-servers were run when these documents were created.
+Private initial version 0.1.0 is selected and unpublished. Chronological entries below retain past
+states/evidence; older M0–M4 table rows need reconciliation with their later verification entries.
+No current M5/M6 acceptance is inferred from earlier runs. No checks ran at initial spec creation.
 
 M0 update (2026-11-11): see [dependency proposal](dependency-proposal.md),
 [compatibility review](transport-compatibility.md) and
@@ -656,3 +684,130 @@ registry integrity/license/engine metadata in the lockfile, without a local inst
 satisfies the upstream declaration dependency for isolated consumers while preserving
 skipLibCheck:false and the existing public/wire contracts. The artifact-upload correction is
 included. No local checks ran; GitHub verification remains pending developer review.
+
+M5 start (2026-11-13, developer requested a new branch from dev and implementation): verified a
+clean checkout on local dev at dd2b5a3, then created feature/m5-offline-delivery. Read the current
+client lifecycle/cancellation/server contracts and M5's requirement to specify delivery semantics
+first. Wrote the concrete [M5 contract proposal](superpowers/specs/2026-11-13-m5-offline-delivery-design.md)
+for a separate bounded in-memory queue, application-routed acknowledgements, authenticated scoped
+server deduplication/retention and reconciliation without automatic uncertain-call replay.
+
+The proposal is not approved and does not extend the locked public contract. AGENTS requires
+approval before exports/types/default/delivery semantics change. No production code, public
+barrels, manifest, lockfile, wire/auth contract or existing defaults changed. No dependencies,
+sub-agents, implementation checks, commits, push, PR or publication. Review of the concrete
+proposal is the next gate; M5 is started, not implemented or accepted. M6 remains untouched.
+
+M5 implementation after explicit developer approval (2026-11-13): added exactly
+createRpcOfflineQueue to /client and createRpcDeliveryLedger to /server under the approved linked
+contract. Source is in src/client/createRpcOfflineQueue.ts, src/server/createRpcDeliveryLedger.ts
+and private src/core/delivery.ts boundaries. No dependency pins, package entry paths, transport
+frames/version/reserved methods, stable error codes, existing client options/defaults or native
+runtime promises changed. The initial package version remains private 0.1.0.
+
+The queue copies bounded encoded commands, dispatches unsent work FIFO only while authenticated
+ready, owns one nearest-expiry timer, and distinguishes cancellation/expiry/close before and after
+invocation. Uncertain work is retained for read-only reconciliation once per new ready epoch or
+explicit lookup; missing status never authorizes resubmission. A callback ignoring abort keeps a
+serialization fence until settlement, without preventing local ticket expiry/close. Safe frozen
+snapshots omit payloads/credentials. The borrowed connection retains connect/retry/close ownership.
+
+The ledger reserves input/identity/metadata and maximum result bytes before mutation, joins live
+scoped duplicates, rejects conflicting payloads, pins running work and retains bounded receipts or
+uncertain tombstones. Raw handler errors are propagated to active callers but not retained in
+settled ledger task references. Ledger-owned shutdown is separate from a single RPC observer's
+abort; wrappers must authenticate/authorize scope and explicitly opt into that execution lifetime.
+No filesystem/database persistence, cross-worker deduplication or exactly-once promise is added.
+
+Adjacent boundary/queue/ledger tests and a real Fastify/oRPC lost-response-after-commit integration
+test are written. The latter closes the actual socket before the command handler returns and
+reconciles on reconnect; another identity's status lookup cannot retrieve the first receipt.
+These are unrun test sources. Public/source/packed declaration fixtures cover required per-call
+context and typed queue inputs/results. Node/browser examples, the isolated consumer runner and
+Expo probe include application-defined command/status flows. Helper Uint8Array data is mapped to
+validated number arrays at the application wire boundary; installed oRPC 1.16.2 has no built-in
+typed-array JSON serialization tag. Physical Android/iPadOS/browser behavior remains unverified.
+
+README, CHANGELOG, error/compatibility/acceptance notes, the approved design and implementation
+plan record exact contracts, byte accounting, limitations and pending evidence. Source self-review
+and read-only git diff inspection were performed; npm run format was used on the explicit changed
+source/config files. No M5 lint, typecheck, tests/coverage, build, playground/smoke, size/export,
+packed-consumer, stress, TypeDoc, CI or device command ran. Existing scripts for developer-run
+verification are npm run lint, npm run typecheck, npm run test:coverage, npm run build, npm run size,
+npm run check:exports, npm run check:consumers, npm run test:stress, npm run playground:smoke and
+npm run docs; manual browser/device observations remain separate. See docs/acceptance.md for M5
+cases. All M5 acceptance gates remain open. Branch feature/m5-offline-delivery; no install,
+sub-agents, commits, pushes, PRs, tags, release or publication. M6 is untouched.
+
+M6 start (2026-11-13, developer requested implementation): inspected the spec, existing borrowed
+client lifecycle, query/stream examples and adjacent React 19 consumer manifests. Preserved all
+uncommitted M5 source on feature/m5-offline-delivery; no branch switch, stash, commit or acceptance
+claim. Wrote the concrete [M6 contract proposal](superpowers/specs/2026-11-13-m6-react-query-design.md)
+and [dependency proposal](m6-dependency-proposal.md). Proposed exactly useRpcSnapshot/useRpcQuery/
+useRpcMutation in an optional /react entry, with manual queries, explicit mutations, isolated cache
+identity and no connection ownership, automatic replay or product storage/UI.
+
+Official npm metadata and exact published Query 5.107.1 source were inspected read-only; Context7
+references covered external-store snapshots, SSR/hydration, retries and network/cancellation
+behavior. Six direct peer/dev dependency candidates include exact versions, roles, licenses and
+approximate unpacked sizes. No new dependency, manifest/lockfile, production source, public barrel,
+export map, build config, wire/auth/default/runtime contract or size gate was changed by this start.
+Approval is required under AGENTS before those concrete additions. No installs, implementation
+checks, sub-agents, push/PR or publication. M6 is started, not implemented or accepted; M5 and
+earlier runtime/browser/device acceptance gates remain open.
+
+M6 implementation after explicit developer approval (2026-11-13): wrote
+src/react/{index,queryIdentity,useRpcSnapshot,useRpcQuery,useRpcMutation}.ts, adjacent real
+ReactDOM/jsdom hook tests and the private core/testing/reactHarness.ts utility. /react exports
+exactly the three approved hooks; root/client/server/Fastify barrels and transport/auth/error/
+connection defaults are unchanged. Snapshot uses cached external-store state and stable idle SSR/
+hydration state. Query reads are manual-only, with explicit no-retry/no-refetch/no-pause policy,
+empty initial/placeholder data and a fixed upstream hash. Mutations use public MutationObserver
+per effective key to avoid old-handle render data; explicit caller actions retain typed variables/
+outputs and original unknown errors. No any proxy or invented Promise rejection inference.
+
+package.json contains the exact approved six dev pins and optional React/Query/type peers/meta.
+No install or lockfile resolution ran: developer npm install must regenerate package-lock before
+npm ci/CI or checks. The unchanged old lockfile does not establish the new dependency graph.
+tsdown adds the optional neutral entry, explicit external peers and a targeted use-client banner;
+package inspection requires that first directive and exactly five subpaths while preserving the
+strict root/client graph allowlist. Browser typecheck and TypeDoc include /react. The 10 kB React
+entry and separate 300 KiB complete React consumer budget leave all existing budgets unchanged.
+
+Packed runner source now creates isolated no-peer, Node, baseline-browser and React consumers;
+the first three omit/assert absence of optional React peers. It compiles public declarations,
+executes no-peer import and React SSR probes, and audits complete React/baseline graphs separately.
+Required caller context and query/mutation input/output negative cases are written. The existing
+Expo helper import is normalized through a sibling source seam so the copied probe resolves the
+application helper inside its isolated consumer. No native dependency/support change is made.
+
+playground/react provides caller-owned StrictMode/QueryClient UI with explicit connect/refetch/
+mutate/close; existing dev runner selects it via --react. New actual script: npm run playground:react.
+README, CHANGELOG, fixtures/playground guides, errors, compatibility and acceptance describe the
+approved policy and limitations. New hook/package/graph/consumer tests are source only, unrun.
+Source review is inline without sub-agents; only formatting/read-only diff inspection is performed.
+No npm install, lint, typecheck, tests/coverage, build, size/export/consumer/API-doc checks,
+playground/server/browser/SSR execution, CI, commits, push, PR or publication. All M6 acceptance
+gates and remaining M5/earlier platform acceptance remain open on feature/m5-offline-delivery.
+
+M5/M6 lint/typecheck follow-up (2026-11-13): the developer explicitly authorized both commands and
+fixing all reported issues. Approved dependencies and a modified package-lock were present at
+task start; no agent install, lockfile edit, new dependency or version change was needed. Actual
+local runtime is Node v22.22.3; target Node 24 runtime acceptance is separate.
+
+Initial lint reported four errors and two warnings. Replaced optional-chain warnings, organized
+the Query import, moved React test probes to module scope and memoized mutation keys/options.
+Typecheck exposed Query 5.107.1's conditional mutation-argument tuple versus the observer's required
+argument. The adapter now accepts the exact upstream rest tuple and uses the same narrow
+TVariables argument bridge as upstream useMutation; no any or router/output inference cast.
+Public compile fixtures verify required mutation variables cannot be omitted while void variables
+can be omitted. Corrected test-only ReactElement/unknown annotations and moved a multiline
+@ts-expect-error directly onto the intentionally forbidden enabled property. No public contract,
+wire/auth/default policy, shared preset or lint rule changed.
+
+Fresh npm run lint exited 0: 108 files, no errors/warnings or applied fixes. Fresh npm run typecheck
+exited 0 through production isolated declarations, browser, tests/config/scripts, playground and
+both transport/consumer source fixture projects, including React/device probes. README/acceptance
+records updated to distinguish these checks from runtime evidence. No unit/coverage execution,
+build, pack/exports/size, consumers, stress, docs, playground/server/browser/device or CI run.
+No sub-agents, commits, push, PR or publication. M5/M6 runtime acceptance gates remain open.

@@ -27,6 +27,10 @@
     "./fastify": {
       "types": "./dist/node/fastify/index.d.mts",
       "default": "./dist/node/fastify/index.mjs"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.mts",
+      "default": "./dist/react/index.mjs"
     }
   },
   "scripts": {
@@ -42,6 +46,7 @@
     "fixtures": "tsc --noEmit -p fixtures/transport/tsconfig.json && tsc --noEmit -p fixtures/consumers/tsconfig.json",
     "playground:smoke": "npm run build && node playground/smoke.mjs",
     "playground": "npm run build && node playground/dev.mjs",
+    "playground:react": "npm run build && node playground/dev.mjs --react",
     "check:consumers": "node scripts/checkConsumers.mjs",
     "test:stress": "node --expose-gc scripts/stressTransport.mjs"
   },
@@ -55,18 +60,38 @@
     "zod": "4.6.7"
   },
   "peerDependencies": {
+    "@tanstack/react-query": "^5.107.1",
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0",
     "fastify": "5.12.8"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-query": {
+      "optional": true
+    },
+    "@types/react": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
     "@biomejs/biome": "2.6.6",
     "@integr8-media/config": "1.2.0",
     "@size-limit/file": "14.3.0",
+    "@tanstack/react-query": "5.107.1",
     "@types/node": "24.10.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "@types/ws": "8.18.2",
     "@vitest/coverage-v8": "5.1.0",
     "fastify": "5.12.8",
+    "jsdom": "27.4.0",
     "publint": "0.3.25",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "size-limit": "14.3.0",
     "tsdown": "0.23.7",
     "typedoc": "0.28.20",

@@ -1,5 +1,6 @@
 import { type RpcClientOptions, RpcError } from '@integr8-media/ws-rpc';
 import { chunkBinary, createRpcClient, createRpcClientGroup } from '@integr8-media/ws-rpc/client';
+import { makeExampleOfflineQueue } from './offlineClient.ts';
 import type { ExampleClient } from './router.ts';
 
 export interface DeviceResult {
@@ -11,6 +12,7 @@ export interface DeviceResult {
   readonly received: number;
   readonly localBinaryBytes: number;
   readonly binaryRpcBytes: number | null;
+  readonly offlineAcknowledgedTotal: number;
 }
 
 /** Run inside the developer's existing Expo app. No React/native imports enter the transport. */
@@ -32,14 +34,19 @@ export async function runDevice(
   const states: string[] = [];
   const connection = createRpcClient<ExampleClient>(options.connection);
   const group = createRpcClientGroup({ main: connection });
+  const offline = makeExampleOfflineQueue(connection);
+  const ticket = offline.enqueue(1, { key: `device_${Date.now()}` });
   const detach = connection.subscribe((snapshot) => {
     states.push(snapshot.state);
   });
   let received = 0;
   let localBinaryBytes = 0;
+  let offlineAcknowledgedTotal = 0;
   let binaryRpcBytes: number | null = options.verifyBinaryRpc ? 0 : null;
   try {
     await group.connect('main');
+    offlineAcknowledgedTotal = await ticket.result;
+    if (offlineAcknowledgedTotal < 1) throw new Error('Missing offline command receipt.');
     const result = await connection.client.lookup({ id: 'device' });
     if (result.id !== 'device' || typeof result.owner !== 'string')
       throw new Error('Unexpected call output.');
@@ -71,6 +78,7 @@ export async function runDevice(
       if (!(error instanceof RpcError) || error.code !== 'CANCELLED') throw error;
     }
   } finally {
+    await offline.close();
     await group.close();
     detach();
   }
@@ -84,5 +92,6 @@ export async function runDevice(
     received,
     localBinaryBytes,
     binaryRpcBytes,
+    offlineAcknowledgedTotal,
   });
 }

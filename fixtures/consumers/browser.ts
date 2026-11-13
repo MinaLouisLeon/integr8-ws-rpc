@@ -1,5 +1,6 @@
 import { RpcError } from '@integr8-media/ws-rpc';
 import { chunkBinary, createRpcClient, createRpcClientGroup } from '@integr8-media/ws-rpc/client';
+import { makeExampleOfflineQueue } from './offlineClient.ts';
 import type { ExampleClient } from './router.ts';
 
 // A real bundled entry using only the installed package's browser-safe public entry points.
@@ -19,6 +20,10 @@ export function safeCode(error: unknown): string {
 const status = document.createElement('p');
 const connection = makeBrowserConnection('ws://127.0.0.1/rpc');
 const group = createRpcClientGroup({ main: connection });
+const offline = makeExampleOfflineQueue(connection);
+const ticket = offline.enqueue(1, { key: 'packed_browser_cancelled' });
+void ticket.result.catch(() => {});
+ticket.cancel();
 status.textContent = `Packed browser client imported: ${group.getSnapshot().main.state}. Runtime RPC requires the separate playground.`;
 document.body.append(status);
 void (async () => {
@@ -36,6 +41,7 @@ void (async () => {
 window.addEventListener(
   'pagehide',
   () => {
+    void offline.close();
     void group.close().catch((error: unknown) => {
       status.textContent = safeCode(error);
     });

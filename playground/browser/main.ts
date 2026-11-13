@@ -1,5 +1,6 @@
 import { RpcError } from '@integr8-media/ws-rpc';
 import { chunkBinary, createRpcClient, createRpcClientGroup } from '@integr8-media/ws-rpc/client';
+import { makeExampleOfflineQueue } from '../offlineClient.ts';
 import type { ExampleClient } from '../router.ts';
 
 function element<T extends HTMLElement>(id: string, kind: new () => T): T {
@@ -19,6 +20,8 @@ const connection = createRpcClient<ExampleClient>({
   createWebSocket: (url) => new WebSocket(url),
 });
 const group = createRpcClientGroup({ main: connection });
+const offline = makeExampleOfflineQueue(connection);
+let commandNumber = 0;
 const detach = group.subscribe((snapshot) => {
   state.textContent = snapshot.main.state;
 });
@@ -31,6 +34,15 @@ function action(id: string, run: () => Promise<unknown>): void {
   });
 }
 action('connect', () => group.connect('main'));
+action('enqueue', async () => {
+  commandNumber += 1;
+  const ticket = offline.enqueue(1, { key: `browser_${Date.now()}_${commandNumber}` });
+  show(`queued ${ticket.key}; connect to dispatch`);
+  void ticket.result.then(
+    (total) => show(`acknowledged example total ${total}`),
+    (error: unknown) => show(error instanceof RpcError ? error.code : 'Application error'),
+  );
+});
 action('binary', async () => {
   for await (const chunk of chunkBinary(new Uint8Array([1, 2, 3, 4, 5]), {
     maxBytes: 5,
@@ -65,6 +77,7 @@ action('unsubscribe', async () => {
   subscription = undefined;
 });
 action('close', async () => {
+  await offline.close();
   await group.close();
   detach();
 });
@@ -72,6 +85,7 @@ window.addEventListener(
   'pagehide',
   () => {
     detach();
+    void offline.close();
     void group.close();
   },
   { once: true },

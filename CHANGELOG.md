@@ -4,6 +4,14 @@
 
 Source under development; no published package version or completed milestone gate is claimed.
 
+- Approved M6 source: optional /react entry with borrowed connection snapshots, manual typed
+  Query reads and explicit no-retry mutations. Includes optional peers, no-peer/React packed
+  probes, SSR/hook tests and a separate React playground. Installation/verification are pending.
+
+- Approved M5 source: explicit bounded offline queue, scoped process-local receipt ledger,
+  expiry/cancellation and read-only outcome reconciliation without automatic uncertain replay.
+  Existing client defaults are preserved. New tests/consumer probes are written but unexecuted.
+
 - Typed WebSocket RPC calls using oRPC, authenticated/versioned hello and guarded context.
 - Client state, cancellation, deadlines, finite reconnect and opt-in stream resubscription/gaps.
 - Fastify adapter with explicit origin policy, parser limits and host-preserving disposal.

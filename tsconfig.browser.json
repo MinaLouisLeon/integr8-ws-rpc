@@ -1,6 +1,6 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": { "types": [] },
-  "include": ["src/index.ts", "src/client/**/*.ts", "src/core/**/*.ts"],
+  "include": ["src/index.ts", "src/client/**/*.ts", "src/core/**/*.ts", "src/react/**/*.ts"],
   "exclude": ["src/**/*.test.ts", "src/core/testing/**"]
 }

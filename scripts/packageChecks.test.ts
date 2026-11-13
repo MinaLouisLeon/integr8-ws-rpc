@@ -16,7 +16,7 @@ async function fixture(extra: Record<string, string> = {}): Promise<string> {
   const directory = await mkdtemp(join(tmpdir(), 'ws-rpc-package-'));
   directories.push(directory);
   const exports = Object.fromEntries(
-    ['.', './client', './server', './fastify'].map((entry) => {
+    ['.', './client', './server', './fastify', './react'].map((entry) => {
       const name = entry === '.' ? 'index' : entry.slice(2);
       return [entry, { types: `./dist/${name}.d.mts`, default: `./dist/${name}.mjs` }];
     }),
@@ -24,8 +24,8 @@ async function fixture(extra: Record<string, string> = {}): Promise<string> {
   const files: Record<string, string> = {
     'package.json': JSON.stringify({ files: ['dist'], exports }),
     ...Object.fromEntries(
-      ['index', 'client', 'server', 'fastify'].flatMap((entry) => [
-        [`dist/${entry}.mjs`, 'export {};'],
+      ['index', 'client', 'server', 'fastify', 'react'].flatMap((entry) => [
+        [`dist/${entry}.mjs`, entry === 'react' ? "'use client'; export {};" : 'export {};'],
         [`dist/${entry}.d.mts`, 'export {};'],
       ]),
     ),
@@ -40,8 +40,21 @@ async function fixture(extra: Record<string, string> = {}): Promise<string> {
 }
 
 describe('M0 package boundary inspection', () => {
-  it('accepts the four entry paths when source and private modules stay out of dist', async () => {
+  it('accepts the five entry paths when source and private modules stay out of dist', async () => {
     await expect(inspectPackage(await fixture())).resolves.toHaveLength(2);
+  });
+
+  it('requires the optional React client directive without allowing peers into the base client', async () => {
+    await expect(inspectPackage(await fixture({ 'dist/react.mjs': 'export {};' }))).rejects.toThrow(
+      'use client',
+    );
+    await expect(
+      inspectPackage(
+        await fixture({
+          'dist/client.mjs': "export { useState } from 'react';",
+        }),
+      ),
+    ).rejects.toThrow('external runtime import');
   });
 
   it('follows relative chunks before checking browser import isolation', async () => {

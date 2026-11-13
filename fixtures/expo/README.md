@@ -6,7 +6,9 @@ React/native dependency to the transport or this repository. Actual device check
 1. Build and run npm run check:consumers after choosing the initial package version. Retain the exact
    tarball and SHA-256 from evidence.json. Install that tarball into your existing Expo app using its
    package manager; use the same artifact on Android and iPadOS. Record its resolved dependency lock.
-2. Copy runDevice.ts and playground/router.ts (named router.ts beside it) into that application.
+2. Copy runDevice.ts, playground/router.ts (named router.ts beside it) and playground/offlineClient.ts
+   (named offlineClient.ts beside it) into that application. runDevice.ts already uses that sibling
+   import. The repository's fixtures/expo/offlineClient.ts is a source-check seam, not the file to copy.
    The router import in the probe is type-only; do not import its server value into the native bundle.
    The existing app's type tooling must resolve the matching oRPC/Zod declarations.
 3. Host exampleRouter behind the public server/Fastify factories with the example fake-token auth
@@ -34,3 +36,9 @@ verifyBinaryRpc:true against the updated exampleRouter. Expected binaryRpcBytes:
 after real procedure replies; otherwise it stays null, explicitly meaning not checked. Preserve each
 device's actual result or compatibility failure. Compilation and local slicing do not establish
 native Blob support. Also test abort during reads/callbacks and unsubscribe in the native runtime.
+
+M5 adds offlineAcknowledgedTotal: the probe explicitly enqueues an increment before connect, then
+requires a completed application receipt with total >=1. The updated example routes and the same
+packed artifact must be installed on both ends. They use validated number arrays on the wire,
+not native typed-array serialization. Also observe offline expiry, cancellation, reconnect/status
+lookup and group/queue shutdown on device. No physical-device execution is claimed by this source.
