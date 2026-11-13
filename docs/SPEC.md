@@ -381,9 +381,19 @@ Update this section after each task; never infer verification from source presen
 | M6 React / Query | Approved hooks/tests/build/consumer/example source written; acceptance open | Lint/full source typecheck pass on Node 22.22.3 | Current feature/m5-offline-delivery retained with M5 edits. Approved dependencies and updated lockfile were already present for follow-up. Runtime/build/packed/browser acceptance remains open. |
 
 The entries below are chronological task records; the table above describes current status.
-Private initial version 0.1.0 is selected and unpublished. Chronological entries below retain past
+Initial version 0.1.0 is selected; the manifest now permits publication. No agent publication ran.
+Chronological entries below retain past
 states/evidence; older M0–M4 table rows need reconciliation with their later verification entries.
 No current M5/M6 acceptance is inferred from earlier runs. No checks ran at initial spec creation.
+
+Publication configuration follow-up (2026-11-13): the developer reported that
+`npm publish --access public` was blocked because the package was marked private despite the
+public GitHub repository. Changed only package.json's private flag from true to false; npm's
+publication guard is independent of repository visibility. Version remains 0.1.0; dependency
+pins, lockfile and public contracts are unchanged. The checkout was clean before this change.
+No install, implementation checks, build, pack, publication, commit, push or PR ran for this fix.
+Developer retry: `npm publish --access public`. Publication success and milestone acceptance
+are not established by this metadata correction.
 
 M0 update (2026-11-11): see [dependency proposal](dependency-proposal.md),
 [compatibility review](transport-compatibility.md) and
